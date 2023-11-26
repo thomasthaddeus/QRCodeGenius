@@ -1,5 +1,5 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
@@ -7,7 +7,7 @@
 
     <EditText
         android:id="@+id/editTextText"
-        android:layout_width="0dp"
+        android:layout_width="16dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:hint="Enter text"
@@ -15,10 +15,10 @@
 
     <Button
         android:id="@+id/buttonGenerate"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_width="18dp"
+        android:layout_height="88dp"
         android:layout_weight="0.3"
-        android:text="Generate QR Code"/>
+        android:text="Generate QR Code" />
 
     <ImageView
         android:id="@+id/imageViewQRCode"
