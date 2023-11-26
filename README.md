@@ -59,14 +59,3 @@ This project is released under the Apache 2.0 License - see the [LICENSE](./LICE
 Thaddeus Thomas - <thaddeus.r.thomas@gmail.com>
 
 Project Link: [https://github.com/thomasthaddeus/qrcode_generator](https://github.com/thomasthaddeus/qrcode_generator)
-
----
-
-**Notes for Your Consideration:**
-
-- Replace `link-to-your-issues-page` with the actual URL to your GitHub issues page.
-- Update the minimum SDK version as per your app’s requirement.
-- Add a section for screenshots to enhance the visual appeal and understanding of the app.
-- Ensure all links are correct and lead to the intended destinations.
-
-This README provides a comprehensive overview of your app, making it easier for others to understand, use, and contribute to your project.
