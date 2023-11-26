@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">ProgrammingTools</string>
+    <string name="edit_text_hint">Enter text</string>
+    <string name="generate_button">Generate QR Code</string>
+    <string name="generate_button_description">Button to generate QR code</string>
+    <string name="image_description">Image of QR Code</string>
 </resources>
