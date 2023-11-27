@@ -1,3 +1,6 @@
+# Directory Structure
+
+```sh
 .
 ├── app
 │   ├── build.gradle
@@ -69,5 +72,4 @@
 ├── gradlew.bat
 ├── local.properties
 └── settings.gradle
-
-34 directories, 37 files
+```
