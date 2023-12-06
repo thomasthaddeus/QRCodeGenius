@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -10,73 +9,65 @@
         android:id="@+id/editTextText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:autofillHints="name"
         android:hint="@string/enter_text_for_qr_code"
         android:inputType="text"
-        android:minHeight="48dp" />
+        android:minHeight="48dp"
+        android:autofillHints="" />
 
     <EditText
         android:id="@+id/editTextSize"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:autofillHints=""
-        android:hint="@string/enter_size_e_g_512"
+        android:hint="@string/enter_size_hint"
         android:inputType="number"
-        android:minHeight="48dp" />
+        android:minHeight="48dp"
+        android:autofillHints="" />
 
     <EditText
         android:id="@+id/editTextSaveText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:autofillHints=""
         android:hint="@string/enter_text_to_save_beneath_the_image"
         android:inputType="text"
-        android:minHeight="48dp" />
-
-    <ImageView
-        android:id="@+id/imageViewQRCode1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="visible"
-        android:contentDescription="@string/todo1" />
+        android:minHeight="48dp"
+        android:autofillHints="" />
 
     <EditText
         android:id="@+id/editTextColor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:autofillHints=""
         android:hint="@string/color_edit_text_hint"
         android:inputType="text"
-        android:minHeight="48dp" />
+        android:minHeight="48dp"
+        android:autofillHints="" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
 
         <Button
-            android:id="@+id/buttonGenerate1"
-            style="?android:attr/buttonBarButtonStyle"
+            android:id="@+id/buttonGenerate"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/generate_qr_code"
             android:textColor="#00796B"
-            tools:ignore="DuplicateSpeakableTextCheck" />
+            style="?android:attr/buttonBarButtonStyle" />
 
         <Button
-            android:id="@+id/buttonGenerate2"
-            style="?android:attr/buttonBarButtonStyle"
+            android:id="@+id/buttonViewSample"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/generate_button"
-            android:textColor="#00796B" />
+            android:text="@string/view_image_sample"
+            android:textColor="#00796B"
+            style="?android:attr/buttonBarButtonStyle" />
     </LinearLayout>
 
     <ImageView
-        android:id="@+id/imageViewQRCode2"
+        android:id="@+id/imageViewQRCode"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:visibility="visible"
-        android:contentDescription="@string/todo" />
-
+        android:contentDescription="@string/image_description"
+        android:visibility="visible" />
 </LinearLayout>

@@ -20,9 +20,12 @@ import java.io.IOException
 class MainActivity : ComponentActivity() {
     private lateinit var imageViewQRCode: ImageView
     private lateinit var bitmap: Bitmap
-    private lateinit var editTextSize: EditText // For user to input desired size
-    private lateinit var editTextSaveText: EditText // For user to input text to save beneath the image
-    private lateinit var editTextColor: EditText // For user to input desired QR code color
+    private lateinit var editText: EditText
+    private lateinit var editTextSize: EditText
+    private lateinit var editTextSaveText: EditText
+    private lateinit var editTextColor: EditText
+    private lateinit var buttonGenerate: Button
+    private lateinit var buttonViewSample: Button
     private val qrCodeGenerator = QRCodeGenerator()
 
     private val createDocument =
@@ -34,32 +37,33 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main) // Assuming you have a corresponding XML layout
+        setContentView(R.layout.activity_main)
 
-        imageViewQRCode = findViewById(R.id.imageViewQRCode1)
-        val editText = findViewById<EditText>(R.id.editTextText)
-        val buttonGenerate = findViewById<Button>(R.id.buttonGenerate1)
-
-        editTextSize = findViewById(R.id.editTextSize) // Assuming you have this in your layout
-        editTextSaveText = findViewById(R.id.editTextSaveText) // Assuming you have this in your layout
-        editTextColor = findViewById(R.id.editTextColor) // Assuming you have this in your layout
+        imageViewQRCode = findViewById(R.id.imageViewQRCode)
+        editText = findViewById(R.id.editTextText)
+        editTextSize = findViewById(R.id.editTextSize)
+        editTextSaveText = findViewById(R.id.editTextSaveText)
+        editTextColor = findViewById(R.id.editTextColor)
+        buttonGenerate = findViewById(R.id.buttonGenerate)
+        buttonViewSample = findViewById(R.id.buttonViewSample)
 
         buttonGenerate.setOnClickListener {
             val text = editText.text.toString()
-            val size = editTextSize.text.toString().toIntOrNull() ?: 512 // Default size if input is invalid
-
-            // Get the color from the input field
-            val color = Color.parseColor(editTextColor.text.toString())
-
-            // Generate QR code with custom color
+            val size = editTextSize.text.toString().toIntOrNull() ?: 256
+            val color = try { Color.parseColor(editTextColor.text.toString()) } catch (e: IllegalArgumentException) { Color.BLACK }
             bitmap = qrCodeGenerator.generateQRCode(text, size, size, color)
             imageViewQRCode.setImageBitmap(bitmap)
-
-            // Combine QR code and saved text into one image
             bitmap = combineImageAndText(bitmap, editTextSaveText.text.toString())
-
-            // Launch intent to save the image
             createDocument.launch("QRCode.png")
+        }
+
+        buttonViewSample.setOnClickListener {
+            // Example to display a sample QR code
+            val sampleText = "Sample QR Code"
+            val sampleSize = 256
+            val sampleColor = Color.BLACK
+            bitmap = qrCodeGenerator.generateQRCode(sampleText, sampleSize, sampleSize, sampleColor)
+            imageViewQRCode.setImageBitmap(bitmap)
         }
     }
 
@@ -83,9 +87,9 @@ class MainActivity : ComponentActivity() {
         // Implementation to combine the QR code and text into a single Bitmap
         // This can be done using Canvas and Paint classes
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = Color.BLACK // Set the text color
-        paint.textSize = 40f // Set the text size
-        paint.typeface = Typeface.DEFAULT_BOLD // Set the typeface as bold
+        paint.color = Color.BLACK
+        paint.textSize = 40f
+        paint.typeface = Typeface.DEFAULT_BOLD
 
         val textWidth = paint.measureText(text)
         val combinedImage = Bitmap.createBitmap(image.width, image.height + (paint.textSize * 1.5).toInt(), Bitmap.Config.ARGB_8888)
