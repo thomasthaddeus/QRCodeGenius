@@ -44,9 +44,9 @@ The Android QR Code Generator is a versatile app that allows users to create cus
 
 ## Screenshots
 
-- [pic1](assets/img/Screenshot_20231214_150355.png)
-- [pic2](assets/img/Screenshot_20231214_150500.png)
-- [pic3](assets/img/Screenshot_20231214_150524.png)
+- ![pic1](assets/img/Screenshot_20231214_150355.png)
+- ![pic2](assets/img/Screenshot_20231214_150500.png)
+- ![pic3](assets/img/Screenshot_20231214_150524.png)
 
 ## Contributing
 
