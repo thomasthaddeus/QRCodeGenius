@@ -1,5 +1,7 @@
 # Android QR Code Generator
 
+[**Testers Needed**](https://play.google.com/store/apps/details?id=com.programmingtools.app)
+
 The Android QR Code Generator is a versatile app that allows users to create customized QR codes directly from their Android devices. It is perfect for various applications, including sharing URLs, contact information, or simple text in the form of a QR code.
 
 ## Technology Stack
