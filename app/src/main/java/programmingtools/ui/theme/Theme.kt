@@ -1,4 +1,4 @@
-package com.example.programmingtools.ui.theme
+package programmingtools.ui.theme
 
 import android.app.Activity
 import android.os.Build

@@ -1,4 +1,4 @@
-package com.example.programmingtools
+package com.programmingtools.app
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
