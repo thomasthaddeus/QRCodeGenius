@@ -1,36 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_screen"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/textViewScreenTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:accessibilityHeading="true"
+        android:text="@string/screen_title"
+        android:textColor="@color/text_primary"
+        android:textSize="30sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textViewScreenSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:contentDescription="@string/screen_subtitle_accessibility"
+        android:text="@string/screen_subtitle"
+        android:textColor="@color/text_secondary"
+        android:textSize="15sp" />
 
     <LinearLayout
+        android:id="@+id/modeSwitchContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_marginTop="18dp"
+        android:background="@drawable/bg_input_surface"
+        android:orientation="horizontal"
+        android:padding="6dp">
 
-        <TextView
-            android:id="@+id/textViewScreenTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:accessibilityHeading="true"
-            android:text="@string/screen_title"
-            android:textColor="@color/text_primary"
-            android:textSize="30sp"
-            android:textStyle="bold" />
+        <Button
+            android:id="@+id/buttonModeCreate"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/button_primary_bg"
+            android:text="@string/mode_create"
+            android:textAllCaps="false"
+            android:textColor="@color/button_primary_text" />
 
-        <TextView
-            android:id="@+id/textViewScreenSubtitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:contentDescription="@string/screen_subtitle_accessibility"
-            android:text="@string/screen_subtitle"
-            android:textColor="@color/text_secondary"
-            android:textSize="15sp" />
-
-        <include layout="@layout/content_qr_form" />
+        <Button
+            android:id="@+id/buttonModeScan"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/button_secondary_bg"
+            android:text="@string/mode_scan"
+            android:textAllCaps="false"
+            android:textColor="@color/button_secondary_text" />
     </LinearLayout>
-</ScrollView>
+
+    <ScrollView
+        android:id="@+id/createModeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/content_qr_form" />
+        </LinearLayout>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/scanModeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <include layout="@layout/content_scan_panel" />
+    </LinearLayout>
+</LinearLayout>
