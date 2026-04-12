@@ -51,9 +51,21 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
             android:layout_weight="1"
             android:backgroundTint="@color/button_secondary_bg"
             android:text="@string/mode_scan"
+            android:textAllCaps="false"
+            android:textColor="@color/button_secondary_text" />
+
+        <Button
+            android:id="@+id/buttonModeHistory"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="@color/button_secondary_bg"
+            android:text="@string/mode_history"
             android:textAllCaps="false"
             android:textColor="@color/button_secondary_text" />
     </LinearLayout>
@@ -84,4 +96,21 @@
 
         <include layout="@layout/content_scan_panel" />
     </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/historyModeContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <include layout="@layout/content_history_panel" />
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>
