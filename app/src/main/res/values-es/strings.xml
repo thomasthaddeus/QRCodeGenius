@@ -1,0 +1,64 @@
+<resources>
+    <string name="app_name">ProgrammingTools</string>
+    <string name="screen_title">Estudio de Códigos QR</string>
+    <string name="screen_subtitle">Crea, previsualiza y guarda códigos QR personalizados en pocos toques.</string>
+    <string name="screen_subtitle_accessibility">Crea, previsualiza, guarda y comparte códigos QR personalizados.</string>
+    <string name="enter_text_for_qr_code">Ingresa el texto para el código QR</string>
+    <string name="text_field_label">Texto para codificar</string>
+    <string name="enter_size_hint">Ingresa el tamaño (por ejemplo, 512)</string>
+    <string name="size_field_label">Tamaño de salida</string>
+    <string name="save_format_label">Formato de guardado</string>
+    <string name="enter_text_to_save_beneath_the_image">Ingresa el texto para guardar debajo de la imagen</string>
+    <string name="save_text_field_label">Texto bajo la imagen</string>
+    <string name="color_picker_label">Color del código QR</string>
+    <string name="choose_color">Elegir color</string>
+    <string name="default_qr_size">256</string>
+    <string name="default_save_text">Escanéame</string>
+    <string name="default_qr_color">#000000</string>
+    <string name="default_save_format">PNG</string>
+    <string name="sample_qr_text">Código QR de muestra</string>
+    <string name="save_format_png">PNG</string>
+    <string name="save_format_jpeg">JPEG</string>
+    <string name="save_format_webp">WEBP</string>
+    <string name="generate_qr_code">Generar código QR</string>
+    <string name="save_qr_code">Guardar código QR</string>
+    <string name="share_qr_code">Compartir código QR</string>
+    <string name="view_image_sample">Ver ejemplo</string>
+    <string name="image_description">Imagen del código QR</string>
+    <string name="preview_unavailable">Aún no hay vista previa del código QR.</string>
+    <string name="selected_save_format_format">Formato seleccionado: %1$s</string>
+    <string name="selected_color_accessibility_format">Color seleccionado del código QR: %1$s</string>
+    <string name="pick_color_accessibility">Abrir el selector de color del código QR</string>
+    <string name="pick_save_format_accessibility">Elegir el formato de archivo usado al guardar el código QR</string>
+    <string name="share_button_accessibility">Compartir la imagen actual del código QR</string>
+    <string name="save_button_accessibility">Guardar el código QR actual en tu dispositivo</string>
+    <string name="sample_button_accessibility">Generar una vista previa de ejemplo del código QR</string>
+    <string name="generate_button_accessibility">Generar un código QR con el texto actual</string>
+    <string name="qr_generated_announcement">Código QR generado y vista previa actualizada.</string>
+    <string name="sample_generated_announcement">Código QR de muestra generado.</string>
+    <string name="save_format_changed_announcement">El formato de guardado cambió a %1$s.</string>
+    <string name="color_changed_announcement">El color del código QR cambió a %1$s.</string>
+    <string name="share_started_announcement">Abriendo opciones para compartir el código QR actual.</string>
+    <string name="save_started_announcement">Elige dónde guardar el código QR actual.</string>
+    <string name="image_saved_announcement">La imagen del código QR se guardó correctamente.</string>
+    <string name="enter_text_error">Ingresa texto antes de generar un código QR.</string>
+    <string name="generate_before_saving">Genera o carga un código QR antes de guardarlo.</string>
+    <string name="default_qr_filename">QRCode.png</string>
+    <string name="image_saved_successfully">Imagen guardada correctamente</string>
+    <string name="share_image_error">Error al compartir la imagen: %1$s</string>
+    <string name="generate_before_sharing">Genera o carga un código QR antes de compartirlo.</string>
+    <string name="share_qr_chooser_title">Compartir código QR</string>
+    <string name="error_saving_image">Error al guardar la imagen: %1$s</string>
+    <string name="color_picker_title">Elegir color del QR</string>
+    <string name="save_format_picker_title">Elegir formato de guardado</string>
+    <string name="red_label">Rojo</string>
+    <string name="green_label">Verde</string>
+    <string name="blue_label">Azul</string>
+    <string name="selected_color_format">Seleccionado: %1$s</string>
+    <string name="preview_section_label">Vista previa</string>
+    <string-array name="save_format_options">
+        <item>@string/save_format_png</item>
+        <item>@string/save_format_jpeg</item>
+        <item>@string/save_format_webp</item>
+    </string-array>
+</resources>
