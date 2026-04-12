@@ -12,17 +12,21 @@
         android:padding="20dp">
 
         <TextView
+            android:id="@+id/textViewScreenTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
             android:text="@string/screen_title"
             android:textColor="@color/text_primary"
             android:textSize="30sp"
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/textViewScreenSubtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:contentDescription="@string/screen_subtitle_accessibility"
             android:text="@string/screen_subtitle"
             android:textColor="@color/text_secondary"
             android:textSize="15sp" />

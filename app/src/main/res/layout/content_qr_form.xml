@@ -9,8 +9,10 @@
         android:orientation="vertical">
 
         <TextView
+            android:id="@+id/labelTextField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:labelFor="@id/editTextText"
             android:text="@string/text_field_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
@@ -30,9 +32,11 @@
             android:paddingVertical="14dp" />
 
         <TextView
+            android:id="@+id/labelSizeField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:labelFor="@id/editTextSize"
             android:text="@string/size_field_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
@@ -53,9 +57,11 @@
             android:text="@string/default_qr_size" />
 
         <TextView
+            android:id="@+id/labelSaveFormatField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedSaveFormat"
             android:text="@string/save_format_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
@@ -66,6 +72,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:contentDescription="@string/pick_save_format_accessibility"
             android:background="@drawable/bg_input_surface"
             android:gravity="center_vertical"
             android:minHeight="60dp"
@@ -85,6 +92,7 @@
                 android:id="@+id/buttonPickSaveFormat"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
+                android:contentDescription="@string/pick_save_format_accessibility"
                 android:backgroundTint="@color/button_secondary_bg"
                 android:paddingHorizontal="18dp"
                 android:text="@string/save_format_label"
@@ -93,9 +101,11 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/labelSaveTextField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:labelFor="@id/editTextSaveText"
             android:text="@string/save_text_field_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
@@ -120,6 +130,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedColor"
             android:text="@string/color_picker_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
@@ -140,6 +151,7 @@
                 android:id="@+id/viewSelectedColor"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:importantForAccessibility="no"
                 android:background="@drawable/bg_color_swatch" />
 
             <TextView
@@ -156,6 +168,7 @@
                 android:id="@+id/buttonPickColor"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
+                android:contentDescription="@string/pick_color_accessibility"
                 android:backgroundTint="@color/button_primary_bg"
                 android:paddingHorizontal="18dp"
                 android:text="@string/choose_color"
@@ -175,6 +188,7 @@
                 android:layout_height="52dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/generate_button_accessibility"
                 android:backgroundTint="@color/button_primary_bg"
                 android:text="@string/generate_qr_code"
                 android:textAllCaps="false"
@@ -187,6 +201,7 @@
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/save_button_accessibility"
                 android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/save_qr_code"
                 android:textAllCaps="false"
@@ -205,6 +220,7 @@
                 android:layout_height="52dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/share_button_accessibility"
                 android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/share_qr_code"
                 android:textAllCaps="false"
@@ -216,6 +232,7 @@
                 android:layout_height="52dp"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
+                android:contentDescription="@string/sample_button_accessibility"
                 android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/view_image_sample"
                 android:textAllCaps="false"
@@ -233,12 +250,24 @@
         android:padding="20dp">
 
         <TextView
+            android:id="@+id/textViewPreviewLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
             android:text="@string/preview_section_label"
             android:textColor="@color/preview_label_text"
             android:textSize="14sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textViewPreviewStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:accessibilityLiveRegion="polite"
+            android:text="@string/preview_unavailable"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
 
         <ImageView
             android:id="@+id/imageViewQRCode"
