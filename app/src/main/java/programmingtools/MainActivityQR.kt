@@ -3,12 +3,14 @@ package com.programmingtools.app
 import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -28,6 +30,43 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 class MainActivity : ComponentActivity() {
+    enum class EyeStyle(@param:StringRes val labelResId: Int) {
+        CLASSIC(R.string.eye_style_classic),
+        ROUNDED(R.string.eye_style_rounded),
+        TARGET(R.string.eye_style_target);
+
+        companion object {
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): EyeStyle {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: CLASSIC
+            }
+        }
+    }
+
+    enum class CenterBadge(@param:StringRes val labelResId: Int) {
+        NONE(R.string.center_badge_none),
+        DOT(R.string.center_badge_dot),
+        DIAMOND(R.string.center_badge_diamond),
+        SQUARE(R.string.center_badge_square);
+
+        companion object {
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): CenterBadge {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: NONE
+            }
+        }
+    }
+
+    enum class DesignStyle(@param:StringRes val labelResId: Int) {
+        MINIMAL(R.string.design_style_minimal),
+        CARD(R.string.design_style_card),
+        STICKER(R.string.design_style_sticker);
+
+        companion object {
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): DesignStyle {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: MINIMAL
+            }
+        }
+    }
+
     private enum class SaveFormat(
         @param:StringRes val labelResId: Int,
         val fileExtension: String,
@@ -49,8 +88,13 @@ class MainActivity : ComponentActivity() {
         private const val STATE_TEXT = "state_text"
         private const val STATE_SIZE = "state_size"
         private const val STATE_SAVE_FORMAT = "state_save_format"
+        private const val STATE_DESIGN_STYLE = "state_design_style"
+        private const val STATE_EYE_STYLE = "state_eye_style"
+        private const val STATE_CENTER_BADGE = "state_center_badge"
+        private const val STATE_LOGO_URI = "state_logo_uri"
         private const val STATE_SAVE_TEXT = "state_save_text"
         private const val STATE_COLOR = "state_color"
+        private const val STATE_BACKGROUND_COLOR = "state_background_color"
         private const val STATE_HAS_QR = "state_has_qr"
     }
 
@@ -58,21 +102,38 @@ class MainActivity : ComponentActivity() {
     private lateinit var editText: EditText
     private lateinit var editTextSize: EditText
     private lateinit var editTextSaveText: EditText
+    private lateinit var buttonPickLogo: Button
+    private lateinit var buttonClearLogo: Button
+    private lateinit var buttonPickEyeStyle: Button
+    private lateinit var buttonPickCenterBadge: Button
+    private lateinit var buttonPickDesignStyle: Button
     private lateinit var buttonPickSaveFormat: Button
     private lateinit var buttonGenerate: Button
     private lateinit var buttonSave: Button
     private lateinit var buttonShare: Button
     private lateinit var buttonPickColor: Button
+    private lateinit var buttonPickBackgroundColor: Button
     private lateinit var buttonViewSample: Button
     private lateinit var viewSelectedColor: View
+    private lateinit var viewSelectedBackgroundColor: View
+    private lateinit var textViewSelectedLogo: TextView
+    private lateinit var textViewSelectedEyeStyle: TextView
+    private lateinit var textViewSelectedCenterBadge: TextView
+    private lateinit var textViewSelectedDesignStyle: TextView
     private lateinit var textViewSelectedSaveFormat: TextView
     private lateinit var textViewSelectedColor: TextView
+    private lateinit var textViewSelectedBackgroundColor: TextView
     private lateinit var textViewPreviewStatus: TextView
     private var generatedBitmap: Bitmap? = null
     private var pendingSaveBitmap: Bitmap? = null
+    private var currentLogoUri: Uri? = null
+    private var currentEyeStyle: EyeStyle = EyeStyle.CLASSIC
+    private var currentCenterBadge: CenterBadge = CenterBadge.NONE
+    private var currentDesignStyle: DesignStyle = DesignStyle.MINIMAL
     private var currentSaveFormat: SaveFormat = SaveFormat.PNG
     private var pendingSaveFormat: SaveFormat = SaveFormat.PNG
     private var selectedColor: Int = Color.BLACK
+    private var selectedBackgroundColor: Int = Color.WHITE
     private val qrCodeGenerator = QRCodeGenerator()
 
     private val createDocument =
@@ -86,6 +147,25 @@ class MainActivity : ComponentActivity() {
             pendingSaveFormat = SaveFormat.PNG
         }
 
+    private val openLogoDocument =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            if (uri == null) {
+                return@registerForActivityResult
+            }
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: SecurityException) {
+                // Some providers do not grant persistable permissions. Temporary access is enough.
+            }
+            updateSelectedLogo(uri)
+            rerenderCurrentQrIfPossible()
+            AppTelemetry.logEvent("logo_selected")
+            announceAccessibilityMessage(getString(R.string.logo_changed_announcement))
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -94,17 +174,39 @@ class MainActivity : ComponentActivity() {
         editText = findViewById(R.id.editTextText)
         editTextSize = findViewById(R.id.editTextSize)
         editTextSaveText = findViewById(R.id.editTextSaveText)
+        buttonPickLogo = findViewById(R.id.buttonPickLogo)
+        buttonClearLogo = findViewById(R.id.buttonClearLogo)
+        buttonPickEyeStyle = findViewById(R.id.buttonPickEyeStyle)
+        buttonPickCenterBadge = findViewById(R.id.buttonPickCenterBadge)
+        buttonPickDesignStyle = findViewById(R.id.buttonPickDesignStyle)
         buttonPickSaveFormat = findViewById(R.id.buttonPickSaveFormat)
         buttonGenerate = findViewById(R.id.buttonGenerate)
         buttonSave = findViewById(R.id.buttonSave)
         buttonShare = findViewById(R.id.buttonShare)
         buttonPickColor = findViewById(R.id.buttonPickColor)
+        buttonPickBackgroundColor = findViewById(R.id.buttonPickBackgroundColor)
         buttonViewSample = findViewById(R.id.buttonViewSample)
         viewSelectedColor = findViewById(R.id.viewSelectedColor)
+        viewSelectedBackgroundColor = findViewById(R.id.viewSelectedBackgroundColor)
+        textViewSelectedLogo = findViewById(R.id.textViewSelectedLogo)
+        textViewSelectedEyeStyle = findViewById(R.id.textViewSelectedEyeStyle)
+        textViewSelectedCenterBadge = findViewById(R.id.textViewSelectedCenterBadge)
+        textViewSelectedDesignStyle = findViewById(R.id.textViewSelectedDesignStyle)
         textViewSelectedSaveFormat = findViewById(R.id.textViewSelectedSaveFormat)
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
+        textViewSelectedBackgroundColor = findViewById(R.id.textViewSelectedBackgroundColor)
         textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
 
+        updateSelectedLogo(null)
+        updateSelectedEyeStyle(
+            EyeStyle.fromLocalizedLabel(getString(R.string.default_eye_style), ::getString)
+        )
+        updateSelectedCenterBadge(
+            CenterBadge.fromLocalizedLabel(getString(R.string.default_center_badge), ::getString)
+        )
+        updateSelectedDesignStyle(
+            DesignStyle.fromLocalizedLabel(getString(R.string.default_design_style), ::getString)
+        )
         updateSelectedSaveFormat(
             SaveFormat.fromLocalizedLabel(
                 getString(R.string.default_save_format),
@@ -112,6 +214,7 @@ class MainActivity : ComponentActivity() {
             )
         )
         updateSelectedColor(Color.parseColor(getString(R.string.default_qr_color)))
+        updateSelectedBackgroundColor(Color.parseColor(getString(R.string.default_qr_background_color)))
         updatePreviewState(hasPreview = false)
 
         buttonGenerate.setOnClickListener {
@@ -156,11 +259,59 @@ class MainActivity : ComponentActivity() {
         }
 
         buttonPickColor.setOnClickListener {
-            showColorPickerDialog()
+            showColorPickerDialog(
+                titleResId = R.string.color_picker_title,
+                initialColor = selectedColor
+            ) { newColor ->
+                updateSelectedColor(newColor)
+                AppTelemetry.logEvent("color_changed", mapOf("color" to formatColor(newColor)))
+                announceAccessibilityMessage(
+                    getString(R.string.color_changed_announcement, formatColor(newColor))
+                )
+            }
+        }
+
+        buttonPickBackgroundColor.setOnClickListener {
+            showColorPickerDialog(
+                titleResId = R.string.background_color_picker_title,
+                initialColor = selectedBackgroundColor
+            ) { newColor ->
+                updateSelectedBackgroundColor(newColor)
+                AppTelemetry.logEvent(
+                    "background_color_changed",
+                    mapOf("color" to formatColor(newColor))
+                )
+                announceAccessibilityMessage(
+                    getString(R.string.background_color_changed_announcement, formatColor(newColor))
+                )
+            }
+        }
+
+        buttonPickLogo.setOnClickListener {
+            openLogoDocument.launch(arrayOf("image/*"))
+        }
+
+        buttonClearLogo.setOnClickListener {
+            updateSelectedLogo(null)
+            rerenderCurrentQrIfPossible()
+            AppTelemetry.logEvent("logo_cleared")
+            announceAccessibilityMessage(getString(R.string.logo_cleared_announcement))
+        }
+
+        buttonPickEyeStyle.setOnClickListener {
+            showEyeStyleDialog()
+        }
+
+        buttonPickCenterBadge.setOnClickListener {
+            showCenterBadgeDialog()
         }
 
         buttonPickSaveFormat.setOnClickListener {
             showSaveFormatDialog()
+        }
+
+        buttonPickDesignStyle.setOnClickListener {
+            showDesignStyleDialog()
         }
 
         buttonViewSample.setOnClickListener {
@@ -168,7 +319,17 @@ class MainActivity : ComponentActivity() {
             val sampleSize = 256
             val sampleColor = selectedColor
             val sampleBitmap =
-                qrCodeGenerator.generateQRCode(sampleText, sampleSize, sampleSize, sampleColor)
+                qrCodeGenerator.generateQRCode(
+                    text = sampleText,
+                    width = sampleSize,
+                    height = sampleSize,
+                    foregroundColor = sampleColor,
+                    backgroundColor = selectedBackgroundColor,
+                    designStyle = selectedDesignStyle(),
+                    eyeStyle = selectedEyeStyle(),
+                    centerBadge = selectedCenterBadge(),
+                    centerLogo = selectedLogoBitmap()
+                )
             imageViewQRCode.setImageBitmap(sampleBitmap)
             generatedBitmap = sampleBitmap
             updatePreviewState(hasPreview = true)
@@ -180,9 +341,16 @@ class MainActivity : ComponentActivity() {
             editText.setText(savedInstanceState.getString(STATE_TEXT).orEmpty())
             editTextSize.setText(savedInstanceState.getString(STATE_SIZE).orEmpty())
             restoreSaveFormat(savedInstanceState.getString(STATE_SAVE_FORMAT).orEmpty())
+            restoreDesignStyle(savedInstanceState.getString(STATE_DESIGN_STYLE).orEmpty())
+            restoreEyeStyle(savedInstanceState.getString(STATE_EYE_STYLE).orEmpty())
+            restoreCenterBadge(savedInstanceState.getString(STATE_CENTER_BADGE).orEmpty())
+            savedInstanceState.getString(STATE_LOGO_URI)?.let { updateSelectedLogo(Uri.parse(it)) }
             editTextSaveText.setText(savedInstanceState.getString(STATE_SAVE_TEXT).orEmpty())
             updateSelectedColor(
                 parseQrColor(savedInstanceState.getString(STATE_COLOR).orEmpty())
+            )
+            updateSelectedBackgroundColor(
+                parseQrColor(savedInstanceState.getString(STATE_BACKGROUND_COLOR).orEmpty())
             )
 
             if (savedInstanceState.getBoolean(STATE_HAS_QR)) {
@@ -229,8 +397,13 @@ class MainActivity : ComponentActivity() {
         outState.putString(STATE_TEXT, editText.text.toString())
         outState.putString(STATE_SIZE, editTextSize.text.toString())
         outState.putString(STATE_SAVE_FORMAT, getString(selectedSaveFormat().labelResId))
+        outState.putString(STATE_DESIGN_STYLE, getString(selectedDesignStyle().labelResId))
+        outState.putString(STATE_EYE_STYLE, getString(selectedEyeStyle().labelResId))
+        outState.putString(STATE_CENTER_BADGE, getString(selectedCenterBadge().labelResId))
+        outState.putString(STATE_LOGO_URI, currentLogoUri?.toString())
         outState.putString(STATE_SAVE_TEXT, editTextSaveText.text.toString())
         outState.putString(STATE_COLOR, formatColor(selectedColor))
+        outState.putString(STATE_BACKGROUND_COLOR, formatColor(selectedBackgroundColor))
         outState.putBoolean(STATE_HAS_QR, generatedBitmap != null)
     }
 
@@ -275,10 +448,61 @@ class MainActivity : ComponentActivity() {
         return currentSaveFormat
     }
 
+    private fun selectedDesignStyle(): DesignStyle {
+        return currentDesignStyle
+    }
+
+    private fun selectedEyeStyle(): EyeStyle {
+        return currentEyeStyle
+    }
+
+    private fun selectedCenterBadge(): CenterBadge {
+        return currentCenterBadge
+    }
+
+    private fun selectedLogoBitmap(): Bitmap? {
+        val uri = currentLogoUri ?: return null
+        return try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                BitmapFactory.decodeStream(inputStream)
+            }
+        } catch (e: Exception) {
+            AppTelemetry.recordNonFatal("logo_decode_failed", e)
+            null
+        }
+    }
+
     private fun restoreSaveFormat(value: String) {
         updateSelectedSaveFormat(
             SaveFormat.fromLocalizedLabel(
                 value.ifBlank { getString(R.string.default_save_format) },
+                ::getString
+            )
+        )
+    }
+
+    private fun restoreDesignStyle(value: String) {
+        updateSelectedDesignStyle(
+            DesignStyle.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_design_style) },
+                ::getString
+            )
+        )
+    }
+
+    private fun restoreEyeStyle(value: String) {
+        updateSelectedEyeStyle(
+            EyeStyle.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_eye_style) },
+                ::getString
+            )
+        )
+    }
+
+    private fun restoreCenterBadge(value: String) {
+        updateSelectedCenterBadge(
+            CenterBadge.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_center_badge) },
                 ::getString
             )
         )
@@ -294,6 +518,44 @@ class MainActivity : ComponentActivity() {
 
     private fun defaultFileNameFor(saveFormat: SaveFormat): String {
         return "QRCode.${saveFormat.fileExtension}"
+    }
+
+    private fun updateSelectedDesignStyle(designStyle: DesignStyle) {
+        currentDesignStyle = designStyle
+        textViewSelectedDesignStyle.text = getString(
+            R.string.selected_design_style_format,
+            getString(designStyle.labelResId)
+        )
+    }
+
+    private fun updateSelectedLogo(uri: Uri?) {
+        currentLogoUri = uri
+        val hasLogo = uri != null
+        textViewSelectedLogo.text = if (hasLogo) {
+            getString(
+                R.string.selected_logo_format,
+                resolveLogoName(uri)
+            )
+        } else {
+            getString(R.string.no_logo_selected)
+        }
+        buttonClearLogo.visibility = if (hasLogo) View.VISIBLE else View.GONE
+    }
+
+    private fun updateSelectedEyeStyle(eyeStyle: EyeStyle) {
+        currentEyeStyle = eyeStyle
+        textViewSelectedEyeStyle.text = getString(
+            R.string.selected_eye_style_format,
+            getString(eyeStyle.labelResId)
+        )
+    }
+
+    private fun updateSelectedCenterBadge(centerBadge: CenterBadge) {
+        currentCenterBadge = centerBadge
+        textViewSelectedCenterBadge.text = getString(
+            R.string.selected_center_badge_format,
+            getString(centerBadge.labelResId)
+        )
     }
 
     private fun updateSelectedSaveFormat(saveFormat: SaveFormat) {
@@ -318,7 +580,17 @@ class MainActivity : ComponentActivity() {
 
         val size = editTextSize.text.toString().toIntOrNull() ?: 256
         val color = selectedColor
-        val qrBitmap = qrCodeGenerator.generateQRCode(text, size, size, color)
+        val qrBitmap = qrCodeGenerator.generateQRCode(
+            text = text,
+            width = size,
+            height = size,
+            foregroundColor = color,
+            backgroundColor = selectedBackgroundColor,
+            designStyle = selectedDesignStyle(),
+            eyeStyle = selectedEyeStyle(),
+            centerBadge = selectedCenterBadge(),
+            centerLogo = selectedLogoBitmap()
+        )
         imageViewQRCode.setImageBitmap(qrBitmap)
         generatedBitmap = qrBitmap
         updatePreviewState(hasPreview = true)
@@ -327,6 +599,11 @@ class MainActivity : ComponentActivity() {
             mapOf(
                 "size" to size.toString(),
                 "color" to formatColor(color),
+                "background_color" to formatColor(selectedBackgroundColor),
+                "design_style" to getString(selectedDesignStyle().labelResId),
+                "eye_style" to getString(selectedEyeStyle().labelResId),
+                "center_badge" to getString(selectedCenterBadge().labelResId),
+                "has_logo" to (currentLogoUri != null).toString(),
                 "has_caption" to editTextSaveText.text.toString().trim().isNotEmpty().toString()
             )
         )
@@ -357,11 +634,45 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private fun updateSelectedBackgroundColor(color: Int) {
+        selectedBackgroundColor = color
+        viewSelectedBackgroundColor.setBackgroundColor(color)
+        textViewSelectedBackgroundColor.text = getString(
+            R.string.selected_color_format,
+            formatColor(color)
+        )
+        textViewSelectedBackgroundColor.contentDescription = getString(
+            R.string.selected_background_color_accessibility_format,
+            formatColor(color)
+        )
+    }
+
     private fun formatColor(color: Int): String {
         return String.format("#%06X", 0xFFFFFF and color)
     }
 
-    private fun showColorPickerDialog() {
+    private fun rerenderCurrentQrIfPossible() {
+        if (generatedBitmap != null && editText.text.toString().trim().isNotEmpty()) {
+            renderQrFromInputs(showValidationError = false)
+        }
+    }
+
+    private fun resolveLogoName(uri: Uri): String {
+        contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+            ?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0 && cursor.moveToFirst()) {
+                    return cursor.getString(nameIndex)
+                }
+            }
+        return uri.lastPathSegment ?: getString(R.string.logo_fallback_name)
+    }
+
+    private fun showColorPickerDialog(
+        @StringRes titleResId: Int,
+        initialColor: Int,
+        onColorSelected: (Int) -> Unit
+    ) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_color_picker, null)
         val preview = dialogView.findViewById<View>(R.id.viewDialogColorPreview)
         val colorValue = dialogView.findViewById<TextView>(R.id.textViewDialogColorValue)
@@ -369,9 +680,9 @@ class MainActivity : ComponentActivity() {
         val greenSeekBar = dialogView.findViewById<SeekBar>(R.id.seekBarGreen)
         val blueSeekBar = dialogView.findViewById<SeekBar>(R.id.seekBarBlue)
 
-        redSeekBar.progress = Color.red(selectedColor)
-        greenSeekBar.progress = Color.green(selectedColor)
-        blueSeekBar.progress = Color.blue(selectedColor)
+        redSeekBar.progress = Color.red(initialColor)
+        greenSeekBar.progress = Color.green(initialColor)
+        blueSeekBar.progress = Color.blue(initialColor)
 
         fun refreshPreview() {
             val color = Color.rgb(redSeekBar.progress, greenSeekBar.progress, blueSeekBar.progress)
@@ -395,16 +706,12 @@ class MainActivity : ComponentActivity() {
         refreshPreview()
 
         AlertDialog.Builder(this)
-            .setTitle(R.string.color_picker_title)
+            .setTitle(titleResId)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 val newColor =
                     Color.rgb(redSeekBar.progress, greenSeekBar.progress, blueSeekBar.progress)
-                updateSelectedColor(newColor)
-                AppTelemetry.logEvent("color_changed", mapOf("color" to formatColor(newColor)))
-                announceAccessibilityMessage(
-                    getString(R.string.color_changed_announcement, formatColor(newColor))
-                )
+                onColorSelected(newColor)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -435,6 +742,81 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    private fun showDesignStyleDialog() {
+        val styles = DesignStyle.entries.toTypedArray()
+        val labels = styles.map { getString(it.labelResId) }.toTypedArray()
+        val selectedIndex = styles.indexOf(selectedDesignStyle()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.design_style_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedDesignStyle(styles[which])
+                AppTelemetry.logEvent(
+                    "design_style_changed",
+                    mapOf("style" to getString(styles[which].labelResId))
+                )
+                announceAccessibilityMessage(
+                    getString(
+                        R.string.design_style_changed_announcement,
+                        getString(styles[which].labelResId)
+                    )
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showEyeStyleDialog() {
+        val styles = EyeStyle.entries.toTypedArray()
+        val labels = styles.map { getString(it.labelResId) }.toTypedArray()
+        val selectedIndex = styles.indexOf(selectedEyeStyle()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.eye_style_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedEyeStyle(styles[which])
+                AppTelemetry.logEvent(
+                    "eye_style_changed",
+                    mapOf("eye_style" to getString(styles[which].labelResId))
+                )
+                announceAccessibilityMessage(
+                    getString(
+                        R.string.eye_style_changed_announcement,
+                        getString(styles[which].labelResId)
+                    )
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showCenterBadgeDialog() {
+        val badges = CenterBadge.entries.toTypedArray()
+        val labels = badges.map { getString(it.labelResId) }.toTypedArray()
+        val selectedIndex = badges.indexOf(selectedCenterBadge()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.center_badge_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedCenterBadge(badges[which])
+                AppTelemetry.logEvent(
+                    "center_badge_changed",
+                    mapOf("badge" to getString(badges[which].labelResId))
+                )
+                announceAccessibilityMessage(
+                    getString(
+                        R.string.center_badge_changed_announcement,
+                        getString(badges[which].labelResId)
+                    )
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun updatePreviewState(hasPreview: Boolean) {
         imageViewQRCode.visibility = if (hasPreview) View.VISIBLE else View.GONE
         textViewPreviewStatus.text = if (hasPreview) {
@@ -454,7 +836,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = getColor(R.color.qr_caption_text)
+        paint.color = selectedColor
         paint.textSize = 40f
         paint.typeface = Typeface.DEFAULT_BOLD
 
@@ -467,7 +849,7 @@ class MainActivity : ComponentActivity() {
         )
 
         val canvas = Canvas(combinedImage)
-        canvas.drawColor(getColor(R.color.qr_background))
+        canvas.drawColor(selectedBackgroundColor)
         canvas.drawBitmap(image, 0f, 0f, null)
         canvas.drawText(text, (image.width - textWidth) / 2, image.height + paint.textSize, paint)
 
@@ -476,17 +858,323 @@ class MainActivity : ComponentActivity() {
 }
 
 class QRCodeGenerator {
-    fun generateQRCode(text: String, width: Int, height: Int, color: Int): Bitmap {
+    fun generateQRCode(
+        text: String,
+        width: Int,
+        height: Int,
+        foregroundColor: Int,
+        backgroundColor: Int,
+        designStyle: MainActivity.DesignStyle,
+        eyeStyle: MainActivity.EyeStyle,
+        centerBadge: MainActivity.CenterBadge,
+        centerLogo: Bitmap?
+    ): Bitmap {
         val writer = QRCodeWriter()
         val bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, width, height)
-        val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565)
-
-        // Use the provided color for QR code pixels instead of default black
+        val baseBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         for (x in 0 until width) {
             for (y in 0 until height) {
-                bmp.setPixel(x, y, if (bitMatrix[x, y]) color else -0x1)
+                baseBitmap.setPixel(x, y, if (bitMatrix[x, y]) foregroundColor else backgroundColor)
             }
         }
-        return bmp
+        val styledBitmap = applyDesignStyle(
+            applyEyeStyle(baseBitmap, foregroundColor, backgroundColor, eyeStyle),
+            foregroundColor,
+            backgroundColor,
+            designStyle
+        )
+        val badgedBitmap = applyCenterBadge(
+            styledBitmap,
+            foregroundColor,
+            backgroundColor,
+            centerBadge
+        )
+        return applyCenterLogo(badgedBitmap, backgroundColor, centerLogo)
+    }
+
+    private fun applyCenterLogo(source: Bitmap, backgroundColor: Int, centerLogo: Bitmap?): Bitmap {
+        if (centerLogo == null) {
+            return source
+        }
+
+        val output = source.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(output)
+        val safeSize = (minOf(output.width, output.height) * 0.18f).toInt().coerceAtLeast(48)
+        val inset = (safeSize * 0.18f).toInt().coerceAtLeast(8)
+        val shieldSize = safeSize + (inset * 2)
+        val left = ((output.width - shieldSize) / 2f)
+        val top = ((output.height - shieldSize) / 2f)
+        val right = left + shieldSize
+        val bottom = top + shieldSize
+        val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = backgroundColor }
+        canvas.drawRoundRect(left, top, right, bottom, shieldSize * 0.22f, shieldSize * 0.22f, shieldPaint)
+
+        val scaledLogo = Bitmap.createScaledBitmap(centerLogo, safeSize, safeSize, true)
+        val logoLeft = ((output.width - safeSize) / 2f)
+        val logoTop = ((output.height - safeSize) / 2f)
+        canvas.drawBitmap(scaledLogo, logoLeft, logoTop, null)
+        return output
+    }
+
+    private fun applyEyeStyle(
+        source: Bitmap,
+        foregroundColor: Int,
+        backgroundColor: Int,
+        eyeStyle: MainActivity.EyeStyle
+    ): Bitmap {
+        if (eyeStyle == MainActivity.EyeStyle.CLASSIC) {
+            return source
+        }
+
+        val output = source.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(output)
+        val quietZone = estimateQuietZone(source, backgroundColor)
+        val moduleSize = (quietZone / 4f).coerceAtLeast(1f)
+        val finderSize = moduleSize * 7f
+        val finderLocations = listOf(
+            quietZone.toFloat() to quietZone.toFloat(),
+            output.width - quietZone - finderSize to quietZone.toFloat(),
+            quietZone.toFloat() to output.height - quietZone - finderSize
+        )
+
+        finderLocations.forEach { (left, top) ->
+            drawFinderEye(
+                canvas = canvas,
+                left = left,
+                top = top,
+                size = finderSize,
+                foregroundColor = foregroundColor,
+                backgroundColor = backgroundColor,
+                eyeStyle = eyeStyle
+            )
+        }
+        return output
+    }
+
+    private fun estimateQuietZone(source: Bitmap, backgroundColor: Int): Int {
+        var minX = source.width
+        var minY = source.height
+        for (x in 0 until source.width) {
+            for (y in 0 until source.height) {
+                if (source.getPixel(x, y) != backgroundColor) {
+                    if (x < minX) minX = x
+                    if (y < minY) minY = y
+                }
+            }
+        }
+        return minOf(minX, minY).coerceAtLeast(4)
+    }
+
+    private fun drawFinderEye(
+        canvas: Canvas,
+        left: Float,
+        top: Float,
+        size: Float,
+        foregroundColor: Int,
+        backgroundColor: Int,
+        eyeStyle: MainActivity.EyeStyle
+    ) {
+        val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = foregroundColor
+            style = Paint.Style.FILL
+        }
+        val cutoutPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = backgroundColor
+            style = Paint.Style.FILL
+        }
+        val innerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = foregroundColor
+            style = Paint.Style.FILL
+        }
+        val outerInset = size / 7f
+        val innerInset = size * 2f / 7f
+
+        when (eyeStyle) {
+            MainActivity.EyeStyle.CLASSIC -> Unit
+            MainActivity.EyeStyle.ROUNDED -> {
+                val outerRadius = size * 0.22f
+                val middleRadius = (size - (outerInset * 2f)) * 0.2f
+                val innerRadius = (size - (innerInset * 2f)) * 0.25f
+                canvas.drawRoundRect(
+                    left,
+                    top,
+                    left + size,
+                    top + size,
+                    outerRadius,
+                    outerRadius,
+                    ringPaint
+                )
+                canvas.drawRoundRect(
+                    left + outerInset,
+                    top + outerInset,
+                    left + size - outerInset,
+                    top + size - outerInset,
+                    middleRadius,
+                    middleRadius,
+                    cutoutPaint
+                )
+                canvas.drawRoundRect(
+                    left + innerInset,
+                    top + innerInset,
+                    left + size - innerInset,
+                    top + size - innerInset,
+                    innerRadius,
+                    innerRadius,
+                    innerPaint
+                )
+            }
+
+            MainActivity.EyeStyle.TARGET -> {
+                val outerRadius = size / 2f
+                val middleRadius = size * 0.32f
+                val innerRadius = size * 0.18f
+                val centerX = left + (size / 2f)
+                val centerY = top + (size / 2f)
+                canvas.drawCircle(centerX, centerY, outerRadius, ringPaint)
+                canvas.drawCircle(centerX, centerY, middleRadius, cutoutPaint)
+                canvas.drawCircle(centerX, centerY, innerRadius, innerPaint)
+            }
+        }
+    }
+
+    private fun applyDesignStyle(
+        source: Bitmap,
+        foregroundColor: Int,
+        backgroundColor: Int,
+        designStyle: MainActivity.DesignStyle
+    ): Bitmap {
+        return when (designStyle) {
+            MainActivity.DesignStyle.MINIMAL -> source
+            MainActivity.DesignStyle.CARD -> styleAsCard(source, foregroundColor, backgroundColor)
+            MainActivity.DesignStyle.STICKER -> styleAsSticker(source, foregroundColor, backgroundColor)
+        }
+    }
+
+    private fun styleAsCard(source: Bitmap, foregroundColor: Int, backgroundColor: Int): Bitmap {
+        val padding = 36
+        val output = Bitmap.createBitmap(
+            source.width + (padding * 2),
+            source.height + (padding * 2),
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(output)
+        val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = backgroundColor }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = foregroundColor
+            style = Paint.Style.STROKE
+            strokeWidth = 8f
+        }
+        val left = 4f
+        val top = 4f
+        val right = output.width - 4f
+        val bottom = output.height - 4f
+        canvas.drawColor(backgroundColor)
+        canvas.drawRoundRect(left, top, right, bottom, 42f, 42f, backgroundPaint)
+        canvas.drawRoundRect(left, top, right, bottom, 42f, 42f, borderPaint)
+        canvas.drawBitmap(source, padding.toFloat(), padding.toFloat(), null)
+        return output
+    }
+
+    private fun styleAsSticker(source: Bitmap, foregroundColor: Int, backgroundColor: Int): Bitmap {
+        val padding = 32
+        val accentHeight = 18
+        val output = Bitmap.createBitmap(
+            source.width + (padding * 2),
+            source.height + (padding * 2) + accentHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(output)
+        val cardPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = backgroundColor }
+        val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = foregroundColor }
+        val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = foregroundColor
+            style = Paint.Style.STROKE
+            strokeWidth = 6f
+        }
+        canvas.drawColor(backgroundColor)
+        canvas.drawRoundRect(
+            3f,
+            accentHeight.toFloat(),
+            output.width - 3f,
+            output.height - 3f,
+            36f,
+            36f,
+            cardPaint
+        )
+        canvas.drawRoundRect(
+            3f,
+            accentHeight.toFloat(),
+            output.width - 3f,
+            output.height - 3f,
+            36f,
+            36f,
+            borderPaint
+        )
+        canvas.drawRoundRect(
+            output.width * 0.18f,
+            0f,
+            output.width * 0.82f,
+            accentHeight.toFloat(),
+            18f,
+            18f,
+            accentPaint
+        )
+        canvas.drawBitmap(source, padding.toFloat(), (padding + accentHeight).toFloat(), null)
+        return output
+    }
+
+    private fun applyCenterBadge(
+        source: Bitmap,
+        foregroundColor: Int,
+        backgroundColor: Int,
+        centerBadge: MainActivity.CenterBadge
+    ): Bitmap {
+        if (centerBadge == MainActivity.CenterBadge.NONE) {
+            return source
+        }
+
+        val output = source.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(output)
+        val shieldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = backgroundColor }
+        val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = foregroundColor }
+        val centerX = output.width / 2f
+        val centerY = output.height / 2f
+        val shieldRadius = output.width * 0.11f
+        val badgeRadius = output.width * 0.06f
+
+        canvas.drawCircle(centerX, centerY, shieldRadius, shieldPaint)
+
+        when (centerBadge) {
+            MainActivity.CenterBadge.DOT -> {
+                canvas.drawCircle(centerX, centerY, badgeRadius, badgePaint)
+            }
+
+            MainActivity.CenterBadge.SQUARE -> {
+                canvas.drawRoundRect(
+                    centerX - badgeRadius,
+                    centerY - badgeRadius,
+                    centerX + badgeRadius,
+                    centerY + badgeRadius,
+                    badgeRadius * 0.3f,
+                    badgeRadius * 0.3f,
+                    badgePaint
+                )
+            }
+
+            MainActivity.CenterBadge.DIAMOND -> {
+                val path = android.graphics.Path().apply {
+                    moveTo(centerX, centerY - badgeRadius)
+                    lineTo(centerX + badgeRadius, centerY)
+                    lineTo(centerX, centerY + badgeRadius)
+                    lineTo(centerX - badgeRadius, centerY)
+                    close()
+                }
+                canvas.drawPath(path, badgePaint)
+            }
+
+            MainActivity.CenterBadge.NONE -> Unit
+        }
+
+        return output
     }
 }
