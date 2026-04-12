@@ -101,6 +101,193 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/labelDesignStyleField"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedDesignStyle"
+            android:text="@string/design_style_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/designStyleContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/pick_design_style_accessibility"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedDesignStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/default_design_style"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickDesignStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:contentDescription="@string/pick_design_style_accessibility"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/choose_style"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/labelCenterBadgeField"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedCenterBadge"
+            android:text="@string/center_badge_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/centerBadgeContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/pick_center_badge_accessibility"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedCenterBadge"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/default_center_badge"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickCenterBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:contentDescription="@string/pick_center_badge_accessibility"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/center_badge_label"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/labelEyeStyleField"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedEyeStyle"
+            android:text="@string/eye_style_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/eyeStyleContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/pick_eye_style_accessibility"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedEyeStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/default_eye_style"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickEyeStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:contentDescription="@string/pick_eye_style_accessibility"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/eye_style_label"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/labelLogoField"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedLogo"
+            android:text="@string/logo_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/logoContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:contentDescription="@string/pick_logo_accessibility"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedLogo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/no_logo_selected"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonClearLogo"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginEnd="8dp"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:text="@string/clear_logo"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text"
+                android:visibility="gone" />
+
+            <Button
+                android:id="@+id/buttonPickLogo"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:contentDescription="@string/pick_logo_accessibility"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/choose_logo"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <TextView
             android:id="@+id/labelSaveTextField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -174,6 +361,57 @@
                 android:text="@string/choose_color"
                 android:textAllCaps="false"
                 android:textColor="@color/button_primary_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textViewBackgroundColorLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:labelFor="@id/textViewSelectedBackgroundColor"
+            android:text="@string/background_color_picker_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/backgroundColorPickerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <View
+                android:id="@+id/viewSelectedBackgroundColor"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:importantForAccessibility="no"
+                android:background="@drawable/bg_color_swatch" />
+
+            <TextView
+                android:id="@+id/textViewSelectedBackgroundColor"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="@string/default_qr_background_color"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickBackgroundColor"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:contentDescription="@string/pick_background_color_accessibility"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/choose_color"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
         </LinearLayout>
 
         <LinearLayout
