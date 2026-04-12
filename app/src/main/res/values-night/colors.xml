@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="screen_bg_start">#FF111827</color>
+    <color name="screen_bg_end">#FF020617</color>
+    <color name="surface_card">#FF1E293B</color>
+    <color name="surface_input">#FF0F172A</color>
+    <color name="surface_preview">#FF172033</color>
+    <color name="border_card">#33475A74</color>
+    <color name="border_input">#FF334155</color>
+    <color name="border_preview">#FF3B475C</color>
+    <color name="text_primary">#FFF8FAFC</color>
+    <color name="text_secondary">#FFCBD5E1</color>
+    <color name="text_muted">#FFE2E8F0</color>
+    <color name="preview_label_text">#FFFCD34D</color>
+    <color name="button_primary_bg">#FFF59E0B</color>
+    <color name="button_primary_text">#FF1C1917</color>
+    <color name="button_secondary_bg">#FF334155</color>
+    <color name="button_secondary_text">#FFF8FAFC</color>
+    <color name="swatch_border">#66F8FAFC</color>
+    <color name="qr_caption_text">#FFF8FAFC</color>
+    <color name="qr_background">#FF0F172A</color>
+</resources>

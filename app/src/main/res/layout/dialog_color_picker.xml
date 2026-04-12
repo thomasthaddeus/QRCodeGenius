@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:background="@color/surface_card"
     android:padding="20dp">
 
     <View
@@ -17,13 +18,15 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:text="@string/default_qr_color"
+        android:textColor="@color/text_primary"
         android:textStyle="bold" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/red_label" />
+        android:text="@string/red_label"
+        android:textColor="@color/text_primary" />
 
     <SeekBar
         android:id="@+id/seekBarRed"
@@ -35,7 +38,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/green_label" />
+        android:text="@string/green_label"
+        android:textColor="@color/text_primary" />
 
     <SeekBar
         android:id="@+id/seekBarGreen"
@@ -47,7 +51,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="@string/blue_label" />
+        android:text="@string/blue_label"
+        android:textColor="@color/text_primary" />
 
     <SeekBar
         android:id="@+id/seekBarBlue"
