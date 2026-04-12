@@ -1,16 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/bg_screen"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Welcome to 10-inch Tablet Layout!"
-        android:textSize="20sp" />
+        android:orientation="vertical"
+        android:padding="32dp">
 
-    <!-- Add additional UI elements specific to 10-inch tablets here -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/screen_title"
+            android:textColor="#FF111827"
+            android:textSize="38sp"
+            android:textStyle="bold" />
 
-</LinearLayout>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/screen_subtitle"
+            android:textColor="#FF475569"
+            android:textSize="18sp" />
+
+        <include layout="@layout/content_qr_form" />
+    </LinearLayout>
+</ScrollView>

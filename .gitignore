@@ -1,33 +1,58 @@
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+
+# Gradle
+.gradle/
+.gradle-user/
+build/
+**/build/
+captures/
+
+# Android/NDK
+.externalNativeBuild/
+.cxx/
 local.properties
 
-# Compiled class file
-*.class
+# Android Studio / IntelliJ
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+.idea/AndroidProjectSystem.xml
+.idea/deploymentTargetDropDown.xml
+.idea/deploymentTargetSelector.xml
+.idea/runConfigurations.xml
+.idea/markdown.xml
+.idea/.name
 
-# Log file
+# App outputs
+debug/
+release/
+*.apk
+*.aab
+*.ap_
+
+# Signing / secrets
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+keystore.properties
+signing.properties
+secrets.properties
+google-services.json
+firebase-service-account.json
+
+# Logs
 *.log
+hs_err_pid*
+replay_pid*
 
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
-*.jar
+# Compiled / archives
+*.class
 *.war
 *.nar
 *.ear
@@ -35,8 +60,6 @@ local.properties
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-replay_pid*
-
-debug/
+# Misc
+*.ctxt
+.mtj.tmp/

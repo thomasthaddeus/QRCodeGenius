@@ -1,10 +1,31 @@
 <resources>
     <string name="app_name">ProgrammingTools</string>
+    <string name="screen_title">QR Code Studio</string>
+    <string name="screen_subtitle">Create, preview, and save custom QR codes in a few taps.</string>
     <string name="enter_text_for_qr_code">Enter text for QR Code</string>
+    <string name="text_field_label">Text to Encode</string>
     <string name="enter_size_hint">Enter size (e.g., 512)</string>
+    <string name="size_field_label">Output Size</string>
     <string name="enter_text_to_save_beneath_the_image">Enter text to save beneath the image</string>
-    <string name="color_edit_text_hint">Enter QR Code color</string>
+    <string name="save_text_field_label">Caption Under Image</string>
+    <string name="color_picker_label">QR code color</string>
+    <string name="choose_color">Choose Color</string>
+    <string name="default_qr_size">256</string>
+    <string name="default_save_text">Scan Me</string>
+    <string name="default_qr_color">#000000</string>
     <string name="generate_qr_code">Generate QR Code</string>
+    <string name="save_qr_code">Save QR Code</string>
     <string name="view_image_sample">View Image Sample</string>
     <string name="image_description">Image of QR Code</string>
+    <string name="enter_text_error">Enter some text before generating a QR code.</string>
+    <string name="generate_before_saving">Generate or load a QR code before saving.</string>
+    <string name="default_qr_filename">QRCode.png</string>
+    <string name="image_saved_successfully">Image saved successfully</string>
+    <string name="error_saving_image">Error saving image: %1$s</string>
+    <string name="color_picker_title">Pick QR Color</string>
+    <string name="red_label">Red</string>
+    <string name="green_label">Green</string>
+    <string name="blue_label">Blue</string>
+    <string name="selected_color_format">Selected: %1$s</string>
+    <string name="preview_section_label">Preview</string>
 </resources>

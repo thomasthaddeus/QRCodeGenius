@@ -2,7 +2,7 @@
 
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>App Signup Sheet</title>
 </head>

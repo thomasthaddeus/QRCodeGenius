@@ -1,73 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <EditText
-        android:id="@+id/editTextText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/enter_text_for_qr_code"
-        android:inputType="text"
-        android:minHeight="48dp"
-        android:autofillHints="" />
-
-    <EditText
-        android:id="@+id/editTextSize"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/enter_size_hint"
-        android:inputType="number"
-        android:minHeight="48dp"
-        android:autofillHints="" />
-
-    <EditText
-        android:id="@+id/editTextSaveText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/enter_text_to_save_beneath_the_image"
-        android:inputType="text"
-        android:minHeight="48dp"
-        android:autofillHints="" />
-
-    <EditText
-        android:id="@+id/editTextColor"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/color_edit_text_hint"
-        android:inputType="text"
-        android:minHeight="48dp"
-        android:autofillHints="" />
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_horizontal">
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <Button
-            android:id="@+id/buttonGenerate"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/generate_qr_code"
-            android:textColor="#00796B"
-            style="?android:attr/buttonBarButtonStyle" />
+            android:text="@string/screen_title"
+            android:textColor="#FF111827"
+            android:textSize="30sp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/buttonViewSample"
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/view_image_sample"
-            android:textColor="#00796B"
-            style="?android:attr/buttonBarButtonStyle" />
+            android:layout_marginTop="8dp"
+            android:text="@string/screen_subtitle"
+            android:textColor="#FF475569"
+            android:textSize="15sp" />
+
+        <include layout="@layout/content_qr_form" />
     </LinearLayout>
-
-    <ImageView
-        android:id="@+id/imageViewQRCode"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:contentDescription="@string/image_description"
-        android:visibility="visible" />
-</LinearLayout>
+</ScrollView>
