@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var viewSelectedColor: View
     private lateinit var textViewSelectedSaveFormat: TextView
     private lateinit var textViewSelectedColor: TextView
+    private lateinit var textViewPreviewStatus: TextView
     private var generatedBitmap: Bitmap? = null
     private var pendingSaveBitmap: Bitmap? = null
     private var currentSaveFormat: SaveFormat = SaveFormat.PNG
@@ -99,9 +100,11 @@ class MainActivity : ComponentActivity() {
         viewSelectedColor = findViewById(R.id.viewSelectedColor)
         textViewSelectedSaveFormat = findViewById(R.id.textViewSelectedSaveFormat)
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
+        textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
 
         updateSelectedSaveFormat(SaveFormat.fromDisplayName(getString(R.string.default_save_format)))
         updateSelectedColor(Color.parseColor(getString(R.string.default_qr_color)))
+        updatePreviewState(hasPreview = false)
 
         buttonGenerate.setOnClickListener {
             if (!renderQrFromInputs(showValidationError = true)) {
@@ -120,6 +123,7 @@ class MainActivity : ComponentActivity() {
             val outputBitmap = combineImageAndText(bitmapToSave, editTextSaveText.text.toString().trim())
             pendingSaveBitmap = outputBitmap
             pendingSaveFormat = selectedSaveFormat()
+            announceAccessibilityMessage(getString(R.string.save_started_announcement))
             createDocument.launch(defaultFileNameFor(pendingSaveFormat))
         }
 
@@ -131,6 +135,7 @@ class MainActivity : ComponentActivity() {
                 return@setOnClickListener
             }
 
+            announceAccessibilityMessage(getString(R.string.share_started_announcement))
             shareBitmap(combineImageAndText(bitmapToShare, editTextSaveText.text.toString().trim()))
         }
 
@@ -149,8 +154,9 @@ class MainActivity : ComponentActivity() {
             val sampleBitmap =
                 qrCodeGenerator.generateQRCode(sampleText, sampleSize, sampleSize, sampleColor)
             imageViewQRCode.setImageBitmap(sampleBitmap)
-            imageViewQRCode.visibility = View.VISIBLE
             generatedBitmap = sampleBitmap
+            updatePreviewState(hasPreview = true)
+            announceAccessibilityMessage(getString(R.string.sample_generated_announcement))
         }
 
         if (savedInstanceState != null) {
@@ -220,6 +226,7 @@ class MainActivity : ComponentActivity() {
                         getString(R.string.image_saved_successfully),
                         Toast.LENGTH_LONG
                     ).show()
+                    announceAccessibilityMessage(getString(R.string.image_saved_announcement))
                 }
             }
         } catch (e: IOException) {
@@ -249,15 +256,18 @@ class MainActivity : ComponentActivity() {
 
     private fun updateSelectedSaveFormat(saveFormat: SaveFormat) {
         currentSaveFormat = saveFormat
-        textViewSelectedSaveFormat.text = saveFormat.displayName
+        textViewSelectedSaveFormat.text = getString(
+            R.string.selected_save_format_format,
+            saveFormat.displayName
+        )
     }
 
     private fun renderQrFromInputs(showValidationError: Boolean): Boolean {
         val text = editText.text.toString().trim()
         if (text.isEmpty()) {
             imageViewQRCode.setImageDrawable(null)
-            imageViewQRCode.visibility = View.GONE
             generatedBitmap = null
+            updatePreviewState(hasPreview = false)
             if (showValidationError) {
                 Toast.makeText(this, getString(R.string.enter_text_error), Toast.LENGTH_LONG).show()
             }
@@ -268,8 +278,11 @@ class MainActivity : ComponentActivity() {
         val color = selectedColor
         val qrBitmap = qrCodeGenerator.generateQRCode(text, size, size, color)
         imageViewQRCode.setImageBitmap(qrBitmap)
-        imageViewQRCode.visibility = View.VISIBLE
         generatedBitmap = qrBitmap
+        updatePreviewState(hasPreview = true)
+        if (showValidationError) {
+            announceAccessibilityMessage(getString(R.string.qr_generated_announcement))
+        }
         return true
     }
 
@@ -286,6 +299,10 @@ class MainActivity : ComponentActivity() {
         viewSelectedColor.setBackgroundColor(color)
         textViewSelectedColor.text = getString(
             R.string.selected_color_format,
+            formatColor(color)
+        )
+        textViewSelectedColor.contentDescription = getString(
+            R.string.selected_color_accessibility_format,
             formatColor(color)
         )
     }
@@ -331,8 +348,11 @@ class MainActivity : ComponentActivity() {
             .setTitle(R.string.color_picker_title)
             .setView(dialogView)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                updateSelectedColor(
+                val newColor =
                     Color.rgb(redSeekBar.progress, greenSeekBar.progress, blueSeekBar.progress)
+                updateSelectedColor(newColor)
+                announceAccessibilityMessage(
+                    getString(R.string.color_changed_announcement, formatColor(newColor))
                 )
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -348,10 +368,26 @@ class MainActivity : ComponentActivity() {
             .setTitle(R.string.save_format_picker_title)
             .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
                 updateSelectedSaveFormat(formats[which])
+                announceAccessibilityMessage(
+                    getString(R.string.save_format_changed_announcement, formats[which].displayName)
+                )
                 dialog.dismiss()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun updatePreviewState(hasPreview: Boolean) {
+        imageViewQRCode.visibility = if (hasPreview) View.VISIBLE else View.GONE
+        textViewPreviewStatus.text = if (hasPreview) {
+            getString(R.string.image_description)
+        } else {
+            getString(R.string.preview_unavailable)
+        }
+    }
+
+    private fun announceAccessibilityMessage(message: String) {
+        findViewById<View>(android.R.id.content)?.announceForAccessibility(message)
     }
 
     private fun combineImageAndText(image: Bitmap, text: String): Bitmap {
