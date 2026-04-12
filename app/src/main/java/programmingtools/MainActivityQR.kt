@@ -9,11 +9,11 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.widget.SeekBar
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -26,9 +26,27 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 class MainActivity : ComponentActivity() {
+    private enum class SaveFormat(
+        val displayName: String,
+        val fileExtension: String,
+        val mimeType: String,
+        val compressFormat: Bitmap.CompressFormat
+    ) {
+        PNG("PNG", "png", "image/png", Bitmap.CompressFormat.PNG),
+        JPEG("JPEG", "jpg", "image/jpeg", Bitmap.CompressFormat.JPEG),
+        WEBP("WEBP", "webp", "image/webp", Bitmap.CompressFormat.WEBP);
+
+        companion object {
+            fun fromDisplayName(value: String): SaveFormat {
+                return entries.firstOrNull { it.displayName == value } ?: PNG
+            }
+        }
+    }
+
     companion object {
         private const val STATE_TEXT = "state_text"
         private const val STATE_SIZE = "state_size"
+        private const val STATE_SAVE_FORMAT = "state_save_format"
         private const val STATE_SAVE_TEXT = "state_save_text"
         private const val STATE_COLOR = "state_color"
         private const val STATE_HAS_QR = "state_has_qr"
@@ -38,25 +56,30 @@ class MainActivity : ComponentActivity() {
     private lateinit var editText: EditText
     private lateinit var editTextSize: EditText
     private lateinit var editTextSaveText: EditText
+    private lateinit var buttonPickSaveFormat: Button
     private lateinit var buttonGenerate: Button
     private lateinit var buttonSave: Button
     private lateinit var buttonShare: Button
     private lateinit var buttonPickColor: Button
     private lateinit var buttonViewSample: Button
     private lateinit var viewSelectedColor: View
+    private lateinit var textViewSelectedSaveFormat: TextView
     private lateinit var textViewSelectedColor: TextView
     private var generatedBitmap: Bitmap? = null
     private var pendingSaveBitmap: Bitmap? = null
+    private var currentSaveFormat: SaveFormat = SaveFormat.PNG
+    private var pendingSaveFormat: SaveFormat = SaveFormat.PNG
     private var selectedColor: Int = Color.BLACK
     private val qrCodeGenerator = QRCodeGenerator()
 
     private val createDocument =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("image/png")) { uri ->
+        registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
             val bitmapToSave = pendingSaveBitmap
             if (uri != null && bitmapToSave != null) {
-                saveImageToUri(bitmapToSave, uri)
+                saveImageToUri(bitmapToSave, uri, pendingSaveFormat)
             }
             pendingSaveBitmap = null
+            pendingSaveFormat = SaveFormat.PNG
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,14 +90,17 @@ class MainActivity : ComponentActivity() {
         editText = findViewById(R.id.editTextText)
         editTextSize = findViewById(R.id.editTextSize)
         editTextSaveText = findViewById(R.id.editTextSaveText)
+        buttonPickSaveFormat = findViewById(R.id.buttonPickSaveFormat)
         buttonGenerate = findViewById(R.id.buttonGenerate)
         buttonSave = findViewById(R.id.buttonSave)
         buttonShare = findViewById(R.id.buttonShare)
         buttonPickColor = findViewById(R.id.buttonPickColor)
         buttonViewSample = findViewById(R.id.buttonViewSample)
         viewSelectedColor = findViewById(R.id.viewSelectedColor)
+        textViewSelectedSaveFormat = findViewById(R.id.textViewSelectedSaveFormat)
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
 
+        updateSelectedSaveFormat(SaveFormat.fromDisplayName(getString(R.string.default_save_format)))
         updateSelectedColor(Color.parseColor(getString(R.string.default_qr_color)))
 
         buttonGenerate.setOnClickListener {
@@ -93,7 +119,8 @@ class MainActivity : ComponentActivity() {
 
             val outputBitmap = combineImageAndText(bitmapToSave, editTextSaveText.text.toString().trim())
             pendingSaveBitmap = outputBitmap
-            createDocument.launch(getString(R.string.default_qr_filename))
+            pendingSaveFormat = selectedSaveFormat()
+            createDocument.launch(defaultFileNameFor(pendingSaveFormat))
         }
 
         buttonShare.setOnClickListener {
@@ -111,6 +138,10 @@ class MainActivity : ComponentActivity() {
             showColorPickerDialog()
         }
 
+        buttonPickSaveFormat.setOnClickListener {
+            showSaveFormatDialog()
+        }
+
         buttonViewSample.setOnClickListener {
             val sampleText = "Sample QR Code"
             val sampleSize = 256
@@ -125,6 +156,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState != null) {
             editText.setText(savedInstanceState.getString(STATE_TEXT).orEmpty())
             editTextSize.setText(savedInstanceState.getString(STATE_SIZE).orEmpty())
+            restoreSaveFormat(savedInstanceState.getString(STATE_SAVE_FORMAT).orEmpty())
             editTextSaveText.setText(savedInstanceState.getString(STATE_SAVE_TEXT).orEmpty())
             updateSelectedColor(
                 parseQrColor(savedInstanceState.getString(STATE_COLOR).orEmpty())
@@ -172,15 +204,16 @@ class MainActivity : ComponentActivity() {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_TEXT, editText.text.toString())
         outState.putString(STATE_SIZE, editTextSize.text.toString())
+        outState.putString(STATE_SAVE_FORMAT, selectedSaveFormat().displayName)
         outState.putString(STATE_SAVE_TEXT, editTextSaveText.text.toString())
         outState.putString(STATE_COLOR, formatColor(selectedColor))
         outState.putBoolean(STATE_HAS_QR, generatedBitmap != null)
     }
 
-    private fun saveImageToUri(bitmap: Bitmap, uri: Uri) {
+    private fun saveImageToUri(bitmap: Bitmap, uri: Uri, saveFormat: SaveFormat) {
         try {
             contentResolver.openOutputStream(uri)?.use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                bitmap.compress(saveFormat.compressFormat, 100, outputStream)
                 runOnUiThread {
                     Toast.makeText(
                         this,
@@ -198,6 +231,25 @@ class MainActivity : ComponentActivity() {
                 ).show()
             }
         }
+    }
+
+    private fun selectedSaveFormat(): SaveFormat {
+        return currentSaveFormat
+    }
+
+    private fun restoreSaveFormat(value: String) {
+        updateSelectedSaveFormat(
+            SaveFormat.fromDisplayName(value.ifBlank { getString(R.string.default_save_format) })
+        )
+    }
+
+    private fun defaultFileNameFor(saveFormat: SaveFormat): String {
+        return "QRCode.${saveFormat.fileExtension}"
+    }
+
+    private fun updateSelectedSaveFormat(saveFormat: SaveFormat) {
+        currentSaveFormat = saveFormat
+        textViewSelectedSaveFormat.text = saveFormat.displayName
     }
 
     private fun renderQrFromInputs(showValidationError: Boolean): Boolean {
@@ -287,13 +339,28 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    private fun showSaveFormatDialog() {
+        val formats = SaveFormat.entries.toTypedArray()
+        val labels = formats.map { it.displayName }.toTypedArray()
+        val selectedIndex = formats.indexOf(selectedSaveFormat()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.save_format_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedSaveFormat(formats[which])
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun combineImageAndText(image: Bitmap, text: String): Bitmap {
         if (text.isBlank()) {
             return image
         }
 
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = Color.BLACK
+        paint.color = getColor(R.color.qr_caption_text)
         paint.textSize = 40f
         paint.typeface = Typeface.DEFAULT_BOLD
 
@@ -306,7 +373,7 @@ class MainActivity : ComponentActivity() {
         )
 
         val canvas = Canvas(combinedImage)
-        canvas.drawColor(Color.WHITE)
+        canvas.drawColor(getColor(R.color.qr_background))
         canvas.drawBitmap(image, 0f, 0f, null)
         canvas.drawText(text, (image.width - textWidth) / 2, image.height + paint.textSize, paint)
 

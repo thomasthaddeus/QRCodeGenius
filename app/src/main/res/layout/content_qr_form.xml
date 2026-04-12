@@ -12,7 +12,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/text_field_label"
-            android:textColor="#FF0F172A"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/size_field_label"
-            android:textColor="#FF0F172A"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -56,8 +56,48 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
+            android:text="@string/save_format_label"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/saveFormatContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_input_surface"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedSaveFormat"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/default_save_format"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickSaveFormat"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:paddingHorizontal="18dp"
+                android:text="@string/save_format_label"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
             android:text="@string/save_text_field_label"
-            android:textColor="#FF0F172A"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -81,7 +121,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/color_picker_label"
-            android:textColor="#FF0F172A"
+            android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -109,18 +149,18 @@
                 android:layout_marginStart="12dp"
                 android:layout_weight="1"
                 android:text="@string/default_qr_color"
-                android:textColor="#FF334155"
+                android:textColor="@color/text_muted"
                 android:textSize="14sp" />
 
             <Button
                 android:id="@+id/buttonPickColor"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
-                android:backgroundTint="#FFF59E0B"
+                android:backgroundTint="@color/button_primary_bg"
                 android:paddingHorizontal="18dp"
                 android:text="@string/choose_color"
                 android:textAllCaps="false"
-                android:textColor="#FF1C1917" />
+                android:textColor="@color/button_primary_text" />
         </LinearLayout>
 
         <LinearLayout
@@ -135,10 +175,10 @@
                 android:layout_height="52dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="#FFF59E0B"
+                android:backgroundTint="@color/button_primary_bg"
                 android:text="@string/generate_qr_code"
                 android:textAllCaps="false"
-                android:textColor="#FF1C1917" />
+                android:textColor="@color/button_primary_text" />
 
             <Button
                 android:id="@+id/buttonSave"
@@ -147,10 +187,10 @@
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="#FFE2E8F0"
+                android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/save_qr_code"
                 android:textAllCaps="false"
-                android:textColor="#FF0F172A" />
+                android:textColor="@color/button_secondary_text" />
         </LinearLayout>
 
         <LinearLayout
@@ -165,10 +205,10 @@
                 android:layout_height="52dp"
                 android:layout_marginEnd="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="#FFE2E8F0"
+                android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/share_qr_code"
                 android:textAllCaps="false"
-                android:textColor="#FF0F172A" />
+                android:textColor="@color/button_secondary_text" />
 
             <Button
                 android:id="@+id/buttonViewSample"
@@ -176,10 +216,10 @@
                 android:layout_height="52dp"
                 android:layout_marginStart="6dp"
                 android:layout_weight="1"
-                android:backgroundTint="#FFE2E8F0"
+                android:backgroundTint="@color/button_secondary_bg"
                 android:text="@string/view_image_sample"
                 android:textAllCaps="false"
-                android:textColor="#FF0F172A" />
+                android:textColor="@color/button_secondary_text" />
         </LinearLayout>
     </LinearLayout>
 
@@ -196,7 +236,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/preview_section_label"
-            android:textColor="#FF7C2D12"
+            android:textColor="@color/preview_label_text"
             android:textSize="14sp"
             android:textStyle="bold" />
 

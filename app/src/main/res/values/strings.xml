@@ -6,6 +6,7 @@
     <string name="text_field_label">Text to Encode</string>
     <string name="enter_size_hint">Enter size (e.g., 512)</string>
     <string name="size_field_label">Output Size</string>
+    <string name="save_format_label">Save Format</string>
     <string name="enter_text_to_save_beneath_the_image">Enter text to save beneath the image</string>
     <string name="save_text_field_label">Caption Under Image</string>
     <string name="color_picker_label">QR code color</string>
@@ -13,6 +14,7 @@
     <string name="default_qr_size">256</string>
     <string name="default_save_text">Scan Me</string>
     <string name="default_qr_color">#000000</string>
+    <string name="default_save_format">PNG</string>
     <string name="generate_qr_code">Generate QR Code</string>
     <string name="save_qr_code">Save QR Code</string>
     <string name="share_qr_code">Share QR Code</string>
@@ -27,9 +29,15 @@
     <string name="share_qr_chooser_title">Share QR Code</string>
     <string name="error_saving_image">Error saving image: %1$s</string>
     <string name="color_picker_title">Pick QR Color</string>
+    <string name="save_format_picker_title">Choose Save Format</string>
     <string name="red_label">Red</string>
     <string name="green_label">Green</string>
     <string name="blue_label">Blue</string>
     <string name="selected_color_format">Selected: %1$s</string>
     <string name="preview_section_label">Preview</string>
+    <string-array name="save_format_options">
+        <item>PNG</item>
+        <item>JPEG</item>
+        <item>WEBP</item>
+    </string-array>
 </resources>

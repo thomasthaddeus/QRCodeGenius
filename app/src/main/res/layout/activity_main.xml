@@ -15,7 +15,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/screen_title"
-            android:textColor="#FF111827"
+            android:textColor="@color/text_primary"
             android:textSize="30sp"
             android:textStyle="bold" />
 
@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/screen_subtitle"
-            android:textColor="#FF475569"
+            android:textColor="@color/text_secondary"
             android:textSize="15sp" />
 
         <include layout="@layout/content_qr_form" />
