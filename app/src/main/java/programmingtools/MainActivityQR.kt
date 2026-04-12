@@ -114,6 +114,7 @@ class MainActivity : ComponentActivity() {
 
         buttonGenerate.setOnClickListener {
             if (!renderQrFromInputs(showValidationError = true)) {
+                AppTelemetry.logEvent("generate_attempted_empty_text")
                 return@setOnClickListener
             }
         }
@@ -123,12 +124,17 @@ class MainActivity : ComponentActivity() {
             if (bitmapToSave == null) {
                 Toast.makeText(this, getString(R.string.generate_before_saving), Toast.LENGTH_LONG)
                     .show()
+                AppTelemetry.logEvent("save_attempted_without_qr")
                 return@setOnClickListener
             }
 
             val outputBitmap = combineImageAndText(bitmapToSave, editTextSaveText.text.toString().trim())
             pendingSaveBitmap = outputBitmap
             pendingSaveFormat = selectedSaveFormat()
+            AppTelemetry.logEvent(
+                "save_started",
+                mapOf("format" to getString(pendingSaveFormat.labelResId))
+            )
             announceAccessibilityMessage(getString(R.string.save_started_announcement))
             createDocument.launch(defaultFileNameFor(pendingSaveFormat))
         }
@@ -138,9 +144,11 @@ class MainActivity : ComponentActivity() {
             if (bitmapToShare == null) {
                 Toast.makeText(this, getString(R.string.generate_before_sharing), Toast.LENGTH_LONG)
                     .show()
+                AppTelemetry.logEvent("share_attempted_without_qr")
                 return@setOnClickListener
             }
 
+            AppTelemetry.logEvent("share_started")
             announceAccessibilityMessage(getString(R.string.share_started_announcement))
             shareBitmap(combineImageAndText(bitmapToShare, editTextSaveText.text.toString().trim()))
         }
@@ -162,6 +170,7 @@ class MainActivity : ComponentActivity() {
             imageViewQRCode.setImageBitmap(sampleBitmap)
             generatedBitmap = sampleBitmap
             updatePreviewState(hasPreview = true)
+            AppTelemetry.logEvent("sample_generated")
             announceAccessibilityMessage(getString(R.string.sample_generated_announcement))
         }
 
@@ -204,6 +213,7 @@ class MainActivity : ComponentActivity() {
                 Intent.createChooser(shareIntent, getString(R.string.share_qr_chooser_title))
             )
         } catch (e: IOException) {
+            AppTelemetry.recordNonFatal("share_failed", e)
             Toast.makeText(
                 this,
                 getString(R.string.share_image_error, e.localizedMessage),
@@ -227,6 +237,10 @@ class MainActivity : ComponentActivity() {
             contentResolver.openOutputStream(uri)?.use { outputStream ->
                 bitmap.compress(saveFormat.compressFormat, 100, outputStream)
                 runOnUiThread {
+                    AppTelemetry.logEvent(
+                        "image_saved",
+                        mapOf("format" to getString(saveFormat.labelResId))
+                    )
                     Toast.makeText(
                         this,
                         getString(R.string.image_saved_successfully),
@@ -236,6 +250,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         } catch (e: IOException) {
+            AppTelemetry.recordNonFatal(
+                "save_failed",
+                e,
+                mapOf("format" to getString(saveFormat.labelResId))
+            )
             runOnUiThread {
                 Toast.makeText(
                     this,
@@ -289,6 +308,14 @@ class MainActivity : ComponentActivity() {
         imageViewQRCode.setImageBitmap(qrBitmap)
         generatedBitmap = qrBitmap
         updatePreviewState(hasPreview = true)
+        AppTelemetry.logEvent(
+            "qr_generated",
+            mapOf(
+                "size" to size.toString(),
+                "color" to formatColor(color),
+                "has_caption" to editTextSaveText.text.toString().trim().isNotEmpty().toString()
+            )
+        )
         if (showValidationError) {
             announceAccessibilityMessage(getString(R.string.qr_generated_announcement))
         }
@@ -360,6 +387,7 @@ class MainActivity : ComponentActivity() {
                 val newColor =
                     Color.rgb(redSeekBar.progress, greenSeekBar.progress, blueSeekBar.progress)
                 updateSelectedColor(newColor)
+                AppTelemetry.logEvent("color_changed", mapOf("color" to formatColor(newColor)))
                 announceAccessibilityMessage(
                     getString(R.string.color_changed_announcement, formatColor(newColor))
                 )
@@ -377,6 +405,10 @@ class MainActivity : ComponentActivity() {
             .setTitle(R.string.save_format_picker_title)
             .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
                 updateSelectedSaveFormat(formats[which])
+                AppTelemetry.logEvent(
+                    "save_format_changed",
+                    mapOf("format" to getString(formats[which].labelResId))
+                )
                 announceAccessibilityMessage(
                     getString(
                         R.string.save_format_changed_announcement,
