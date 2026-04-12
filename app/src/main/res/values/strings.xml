@@ -16,6 +16,10 @@
     <string name="default_save_text">Scan Me</string>
     <string name="default_qr_color">#000000</string>
     <string name="default_save_format">PNG</string>
+    <string name="sample_qr_text">Sample QR Code</string>
+    <string name="save_format_png">PNG</string>
+    <string name="save_format_jpeg">JPEG</string>
+    <string name="save_format_webp">WEBP</string>
     <string name="generate_qr_code">Generate QR Code</string>
     <string name="save_qr_code">Save QR Code</string>
     <string name="share_qr_code">Share QR Code</string>
@@ -53,8 +57,8 @@
     <string name="selected_color_format">Selected: %1$s</string>
     <string name="preview_section_label">Preview</string>
     <string-array name="save_format_options">
-        <item>PNG</item>
-        <item>JPEG</item>
-        <item>WEBP</item>
+        <item>@string/save_format_png</item>
+        <item>@string/save_format_jpeg</item>
+        <item>@string/save_format_webp</item>
     </string-array>
 </resources>

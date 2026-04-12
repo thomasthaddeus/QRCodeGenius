@@ -19,6 +19,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
+import androidx.annotation.StringRes
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
@@ -27,18 +28,18 @@ import java.io.IOException
 
 class MainActivity : ComponentActivity() {
     private enum class SaveFormat(
-        val displayName: String,
+        @param:StringRes val labelResId: Int,
         val fileExtension: String,
         val mimeType: String,
         val compressFormat: Bitmap.CompressFormat
     ) {
-        PNG("PNG", "png", "image/png", Bitmap.CompressFormat.PNG),
-        JPEG("JPEG", "jpg", "image/jpeg", Bitmap.CompressFormat.JPEG),
-        WEBP("WEBP", "webp", "image/webp", Bitmap.CompressFormat.WEBP);
+        PNG(R.string.save_format_png, "png", "image/png", Bitmap.CompressFormat.PNG),
+        JPEG(R.string.save_format_jpeg, "jpg", "image/jpeg", Bitmap.CompressFormat.JPEG),
+        WEBP(R.string.save_format_webp, "webp", "image/webp", Bitmap.CompressFormat.WEBP);
 
         companion object {
-            fun fromDisplayName(value: String): SaveFormat {
-                return entries.firstOrNull { it.displayName == value } ?: PNG
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): SaveFormat {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: PNG
             }
         }
     }
@@ -102,7 +103,12 @@ class MainActivity : ComponentActivity() {
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
         textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
 
-        updateSelectedSaveFormat(SaveFormat.fromDisplayName(getString(R.string.default_save_format)))
+        updateSelectedSaveFormat(
+            SaveFormat.fromLocalizedLabel(
+                getString(R.string.default_save_format),
+                ::getString
+            )
+        )
         updateSelectedColor(Color.parseColor(getString(R.string.default_qr_color)))
         updatePreviewState(hasPreview = false)
 
@@ -148,7 +154,7 @@ class MainActivity : ComponentActivity() {
         }
 
         buttonViewSample.setOnClickListener {
-            val sampleText = "Sample QR Code"
+            val sampleText = getString(R.string.sample_qr_text)
             val sampleSize = 256
             val sampleColor = selectedColor
             val sampleBitmap =
@@ -210,7 +216,7 @@ class MainActivity : ComponentActivity() {
         super.onSaveInstanceState(outState)
         outState.putString(STATE_TEXT, editText.text.toString())
         outState.putString(STATE_SIZE, editTextSize.text.toString())
-        outState.putString(STATE_SAVE_FORMAT, selectedSaveFormat().displayName)
+        outState.putString(STATE_SAVE_FORMAT, getString(selectedSaveFormat().labelResId))
         outState.putString(STATE_SAVE_TEXT, editTextSaveText.text.toString())
         outState.putString(STATE_COLOR, formatColor(selectedColor))
         outState.putBoolean(STATE_HAS_QR, generatedBitmap != null)
@@ -246,7 +252,10 @@ class MainActivity : ComponentActivity() {
 
     private fun restoreSaveFormat(value: String) {
         updateSelectedSaveFormat(
-            SaveFormat.fromDisplayName(value.ifBlank { getString(R.string.default_save_format) })
+            SaveFormat.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_save_format) },
+                ::getString
+            )
         )
     }
 
@@ -258,7 +267,7 @@ class MainActivity : ComponentActivity() {
         currentSaveFormat = saveFormat
         textViewSelectedSaveFormat.text = getString(
             R.string.selected_save_format_format,
-            saveFormat.displayName
+            getString(saveFormat.labelResId)
         )
     }
 
@@ -361,7 +370,7 @@ class MainActivity : ComponentActivity() {
 
     private fun showSaveFormatDialog() {
         val formats = SaveFormat.entries.toTypedArray()
-        val labels = formats.map { it.displayName }.toTypedArray()
+        val labels = formats.map { getString(it.labelResId) }.toTypedArray()
         val selectedIndex = formats.indexOf(selectedSaveFormat()).coerceAtLeast(0)
 
         AlertDialog.Builder(this)
@@ -369,7 +378,10 @@ class MainActivity : ComponentActivity() {
             .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
                 updateSelectedSaveFormat(formats[which])
                 announceAccessibilityMessage(
-                    getString(R.string.save_format_changed_announcement, formats[which].displayName)
+                    getString(
+                        R.string.save_format_changed_announcement,
+                        getString(formats[which].labelResId)
+                    )
                 )
                 dialog.dismiss()
             }
