@@ -15,12 +15,16 @@
     <string name="default_qr_color">#000000</string>
     <string name="generate_qr_code">Generate QR Code</string>
     <string name="save_qr_code">Save QR Code</string>
+    <string name="share_qr_code">Share QR Code</string>
     <string name="view_image_sample">View Image Sample</string>
     <string name="image_description">Image of QR Code</string>
     <string name="enter_text_error">Enter some text before generating a QR code.</string>
     <string name="generate_before_saving">Generate or load a QR code before saving.</string>
     <string name="default_qr_filename">QRCode.png</string>
     <string name="image_saved_successfully">Image saved successfully</string>
+    <string name="share_image_error">Error sharing image: %1$s</string>
+    <string name="generate_before_sharing">Generate or load a QR code before sharing.</string>
+    <string name="share_qr_chooser_title">Share QR Code</string>
     <string name="error_saving_image">Error saving image: %1$s</string>
     <string name="color_picker_title">Pick QR Color</string>
     <string name="red_label">Red</string>
