@@ -1,6 +1,7 @@
 package com.programmingtools.app
 
 import android.app.AlertDialog
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -17,8 +18,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 
 class MainActivity : ComponentActivity() {
@@ -36,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var editTextSaveText: EditText
     private lateinit var buttonGenerate: Button
     private lateinit var buttonSave: Button
+    private lateinit var buttonShare: Button
     private lateinit var buttonPickColor: Button
     private lateinit var buttonViewSample: Button
     private lateinit var viewSelectedColor: View
@@ -64,6 +69,7 @@ class MainActivity : ComponentActivity() {
         editTextSaveText = findViewById(R.id.editTextSaveText)
         buttonGenerate = findViewById(R.id.buttonGenerate)
         buttonSave = findViewById(R.id.buttonSave)
+        buttonShare = findViewById(R.id.buttonShare)
         buttonPickColor = findViewById(R.id.buttonPickColor)
         buttonViewSample = findViewById(R.id.buttonViewSample)
         viewSelectedColor = findViewById(R.id.viewSelectedColor)
@@ -88,6 +94,17 @@ class MainActivity : ComponentActivity() {
             val outputBitmap = combineImageAndText(bitmapToSave, editTextSaveText.text.toString().trim())
             pendingSaveBitmap = outputBitmap
             createDocument.launch(getString(R.string.default_qr_filename))
+        }
+
+        buttonShare.setOnClickListener {
+            val bitmapToShare = generatedBitmap
+            if (bitmapToShare == null) {
+                Toast.makeText(this, getString(R.string.generate_before_sharing), Toast.LENGTH_LONG)
+                    .show()
+                return@setOnClickListener
+            }
+
+            shareBitmap(combineImageAndText(bitmapToShare, editTextSaveText.text.toString().trim()))
         }
 
         buttonPickColor.setOnClickListener {
@@ -116,6 +133,38 @@ class MainActivity : ComponentActivity() {
             if (savedInstanceState.getBoolean(STATE_HAS_QR)) {
                 renderQrFromInputs(showValidationError = false)
             }
+        }
+    }
+
+    private fun shareBitmap(bitmap: Bitmap) {
+        try {
+            val shareDirectory = File(cacheDir, "shared_images").apply { mkdirs() }
+            val shareFile = File(shareDirectory, "qr-code-share.png")
+            FileOutputStream(shareFile).use { outputStream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            }
+
+            val imageUri = FileProvider.getUriForFile(
+                this,
+                "${packageName}.fileprovider",
+                shareFile
+            )
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, imageUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            startActivity(
+                Intent.createChooser(shareIntent, getString(R.string.share_qr_chooser_title))
+            )
+        } catch (e: IOException) {
+            Toast.makeText(
+                this,
+                getString(R.string.share_image_error, e.localizedMessage),
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 

@@ -151,6 +151,24 @@
                 android:text="@string/save_qr_code"
                 android:textAllCaps="false"
                 android:textColor="#FF0F172A" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonShare"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:backgroundTint="#FFE2E8F0"
+                android:text="@string/share_qr_code"
+                android:textAllCaps="false"
+                android:textColor="#FF0F172A" />
 
             <Button
                 android:id="@+id/buttonViewSample"
