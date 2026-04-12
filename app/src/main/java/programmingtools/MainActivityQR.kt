@@ -17,6 +17,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
 import androidx.annotation.StringRes
@@ -75,9 +76,10 @@ class MainActivity : ComponentActivity() {
     private val qrCodeGenerator = QRCodeGenerator()
 
     private val createDocument =
-        registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             val bitmapToSave = pendingSaveBitmap
-            if (uri != null && bitmapToSave != null) {
+            val uri = result.data?.data
+            if (result.resultCode == RESULT_OK && uri != null && bitmapToSave != null) {
                 saveImageToUri(bitmapToSave, uri, pendingSaveFormat)
             }
             pendingSaveBitmap = null
@@ -136,7 +138,7 @@ class MainActivity : ComponentActivity() {
                 mapOf("format" to getString(pendingSaveFormat.labelResId))
             )
             announceAccessibilityMessage(getString(R.string.save_started_announcement))
-            createDocument.launch(defaultFileNameFor(pendingSaveFormat))
+            createDocument.launch(createSaveDocumentIntent(pendingSaveFormat))
         }
 
         buttonShare.setOnClickListener {
@@ -235,7 +237,11 @@ class MainActivity : ComponentActivity() {
     private fun saveImageToUri(bitmap: Bitmap, uri: Uri, saveFormat: SaveFormat) {
         try {
             contentResolver.openOutputStream(uri)?.use { outputStream ->
-                bitmap.compress(saveFormat.compressFormat, 100, outputStream)
+                val compressSucceeded = bitmap.compress(saveFormat.compressFormat, 100, outputStream)
+                outputStream.flush()
+                if (!compressSucceeded) {
+                    throw IOException("Bitmap compression failed for ${getString(saveFormat.labelResId)}")
+                }
                 runOnUiThread {
                     AppTelemetry.logEvent(
                         "image_saved",
@@ -276,6 +282,14 @@ class MainActivity : ComponentActivity() {
                 ::getString
             )
         )
+    }
+
+    private fun createSaveDocumentIntent(saveFormat: SaveFormat): Intent {
+        return Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = saveFormat.mimeType
+            putExtra(Intent.EXTRA_TITLE, defaultFileNameFor(saveFormat))
+        }
     }
 
     private fun defaultFileNameFor(saveFormat: SaveFormat): String {
