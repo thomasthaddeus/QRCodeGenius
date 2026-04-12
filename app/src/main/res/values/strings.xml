@@ -5,6 +5,7 @@
     <string name="screen_subtitle_accessibility">Create, preview, save, and share custom QR codes.</string>
     <string name="mode_create">Create</string>
     <string name="mode_scan">Scan</string>
+    <string name="mode_history">History</string>
     <string name="scan_section_label">Scan QR Codes</string>
     <string name="scan_section_description">Use your camera to scan text, links, and Wi-Fi QR codes.</string>
     <string name="scan_permission_needed">Camera access is needed to scan QR codes.</string>
@@ -35,6 +36,16 @@
     <string name="scan_wifi_connect_title">Connect to Wi-Fi</string>
     <string name="scan_wifi_connect_message">Network: %1$s\nSecurity: %2$s\nHidden: %3$s\n\nNext step:\nOpen Wi-Fi settings, choose this network, and use the copied password if needed.</string>
     <string name="scan_unknown_result">Scanned QR code</string>
+    <string name="history_section_label">Scan History</string>
+    <string name="history_section_description">Recent scanned results are stored locally on this device.</string>
+    <string name="history_empty">No scan history yet.</string>
+    <string name="history_clear_all">Clear History</string>
+    <string name="history_clear_confirm">Remove all saved scan history from this device?</string>
+    <string name="history_action_use_in_create">Use in Create</string>
+    <string name="history_action_copy">Copy</string>
+    <string name="history_action_delete">Delete</string>
+    <string name="history_item_meta_format">%1$s • %2$s</string>
+    <string name="history_wifi_summary_format">Security: %1$s • Hidden: %2$s</string>
     <string name="content_type_label">Content Type</string>
     <string name="enter_text_for_qr_code">Enter text for QR Code</string>
     <string name="text_field_label">Text to Encode</string>

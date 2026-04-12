@@ -21,6 +21,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -45,13 +46,15 @@ import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.text.DateFormat
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
     enum class ScreenMode(@param:StringRes val labelResId: Int) {
         CREATE(R.string.mode_create),
-        SCAN(R.string.mode_scan)
+        SCAN(R.string.mode_scan),
+        HISTORY(R.string.mode_history)
     }
 
     enum class ContentType(@param:StringRes val labelResId: Int) {
@@ -166,16 +169,20 @@ class MainActivity : ComponentActivity() {
     private lateinit var imageViewQRCode: ImageView
     private lateinit var createModeContainer: View
     private lateinit var scanModeContainer: View
+    private lateinit var historyModeContainer: View
     private lateinit var buttonModeCreate: Button
     private lateinit var buttonModeScan: Button
+    private lateinit var buttonModeHistory: Button
     private lateinit var previewViewScanner: PreviewView
     private lateinit var buttonGrantCameraPermission: Button
     private lateinit var buttonResetScan: Button
+    private lateinit var buttonClearHistory: Button
     private lateinit var textViewScanPermissionState: TextView
     private lateinit var textViewScanStatus: TextView
     private lateinit var scanResultContainer: View
     private lateinit var textViewScanResultType: TextView
     private lateinit var textViewScanResultValue: TextView
+    private lateinit var textViewHistoryEmpty: TextView
     private lateinit var buttonScanPrimaryAction: Button
     private lateinit var buttonScanSecondaryAction: Button
     private lateinit var buttonScanUseInCreate: Button
@@ -212,6 +219,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var textViewSelectedColor: TextView
     private lateinit var textViewSelectedBackgroundColor: TextView
     private lateinit var textViewPreviewStatus: TextView
+    private lateinit var historyListContainer: LinearLayout
     private lateinit var textInputContainer: View
     private lateinit var wifiFieldsContainer: View
     private var generatedBitmap: Bitmap? = null
@@ -228,6 +236,7 @@ class MainActivity : ComponentActivity() {
     private var useInCreateAction: (() -> Unit)? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var scanHistoryStore: ScanHistoryStore
     private var currentEyeStyle: EyeStyle = EyeStyle.CLASSIC
     private var currentCenterBadge: CenterBadge = CenterBadge.NONE
     private var currentDesignStyle: DesignStyle = DesignStyle.MINIMAL
@@ -284,19 +293,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         cameraExecutor = Executors.newSingleThreadExecutor()
+        scanHistoryStore = ScanHistoryStore(this)
 
         createModeContainer = findViewById(R.id.createModeContainer)
         scanModeContainer = findViewById(R.id.scanModeContainer)
+        historyModeContainer = findViewById(R.id.historyModeContainer)
         buttonModeCreate = findViewById(R.id.buttonModeCreate)
         buttonModeScan = findViewById(R.id.buttonModeScan)
+        buttonModeHistory = findViewById(R.id.buttonModeHistory)
         previewViewScanner = findViewById(R.id.previewViewScanner)
         buttonGrantCameraPermission = findViewById(R.id.buttonGrantCameraPermission)
         buttonResetScan = findViewById(R.id.buttonResetScan)
+        buttonClearHistory = findViewById(R.id.buttonClearHistory)
         textViewScanPermissionState = findViewById(R.id.textViewScanPermissionState)
         textViewScanStatus = findViewById(R.id.textViewScanStatus)
         scanResultContainer = findViewById(R.id.scanResultContainer)
         textViewScanResultType = findViewById(R.id.textViewScanResultType)
         textViewScanResultValue = findViewById(R.id.textViewScanResultValue)
+        textViewHistoryEmpty = findViewById(R.id.textViewHistoryEmpty)
         buttonScanPrimaryAction = findViewById(R.id.buttonScanPrimaryAction)
         buttonScanSecondaryAction = findViewById(R.id.buttonScanSecondaryAction)
         buttonScanUseInCreate = findViewById(R.id.buttonScanUseInCreate)
@@ -334,6 +348,7 @@ class MainActivity : ComponentActivity() {
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
         textViewSelectedBackgroundColor = findViewById(R.id.textViewSelectedBackgroundColor)
         textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
+        historyListContainer = findViewById(R.id.historyListContainer)
         textInputContainer = findViewById(R.id.textInputContainer)
         wifiFieldsContainer = findViewById(R.id.wifiFieldsContainer)
 
@@ -376,6 +391,10 @@ class MainActivity : ComponentActivity() {
             updateScreenMode(ScreenMode.SCAN)
         }
 
+        buttonModeHistory.setOnClickListener {
+            updateScreenMode(ScreenMode.HISTORY)
+        }
+
         buttonGrantCameraPermission.setOnClickListener {
             requestCameraPermissionIfNeeded()
         }
@@ -394,6 +413,10 @@ class MainActivity : ComponentActivity() {
 
         buttonResetScan.setOnClickListener {
             resetScanResult()
+        }
+
+        buttonClearHistory.setOnClickListener {
+            confirmClearHistory()
         }
 
         buttonGenerate.setOnClickListener {
@@ -666,8 +689,11 @@ class MainActivity : ComponentActivity() {
     private fun updateScreenMode(screenMode: ScreenMode) {
         currentScreenMode = screenMode
         val isCreate = screenMode == ScreenMode.CREATE
+        val isScan = screenMode == ScreenMode.SCAN
+        val isHistory = screenMode == ScreenMode.HISTORY
         createModeContainer.visibility = if (isCreate) View.VISIBLE else View.GONE
-        scanModeContainer.visibility = if (isCreate) View.GONE else View.VISIBLE
+        scanModeContainer.visibility = if (isScan) View.VISIBLE else View.GONE
+        historyModeContainer.visibility = if (isHistory) View.VISIBLE else View.GONE
         buttonModeCreate.backgroundTintList =
             ContextCompat.getColorStateList(
                 this,
@@ -676,7 +702,12 @@ class MainActivity : ComponentActivity() {
         buttonModeScan.backgroundTintList =
             ContextCompat.getColorStateList(
                 this,
-                if (isCreate) R.color.button_secondary_bg else R.color.button_primary_bg
+                if (isScan) R.color.button_primary_bg else R.color.button_secondary_bg
+            )
+        buttonModeHistory.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (isHistory) R.color.button_primary_bg else R.color.button_secondary_bg
             )
         buttonModeCreate.setTextColor(
             ContextCompat.getColor(
@@ -687,13 +718,21 @@ class MainActivity : ComponentActivity() {
         buttonModeScan.setTextColor(
             ContextCompat.getColor(
                 this,
-                if (isCreate) R.color.button_secondary_text else R.color.button_primary_text
+                if (isScan) R.color.button_primary_text else R.color.button_secondary_text
+            )
+        )
+        buttonModeHistory.setTextColor(
+            ContextCompat.getColor(
+                this,
+                if (isHistory) R.color.button_primary_text else R.color.button_secondary_text
             )
         )
 
-        if (isCreate) {
+        if (isCreate || isHistory) {
             stopScanner()
-        } else {
+        }
+
+        if (isScan) {
             resetScanResult()
             if (hasCameraPermission()) {
                 updateScanPermissionUi(granted = true)
@@ -703,6 +742,156 @@ class MainActivity : ComponentActivity() {
                 updateScanStatus(getString(R.string.scan_permission_needed))
             }
         }
+
+        if (isHistory) {
+            renderHistory()
+        }
+    }
+
+    private fun renderHistory() {
+        val entries = scanHistoryStore.list()
+        historyListContainer.removeAllViews()
+        textViewHistoryEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+
+        entries.forEach { entry ->
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                background = ContextCompat.getDrawable(this@MainActivity, R.drawable.bg_preview_surface)
+                setPadding(20, 20, 20, 20)
+            }
+            val params = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = 16
+            }
+            card.layoutParams = params
+
+            val titleView = TextView(this).apply {
+                text = entry.title
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_primary))
+                textSize = 16f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+            }
+            val metaView = TextView(this).apply {
+                text = getString(
+                    R.string.history_item_meta_format,
+                    entry.type,
+                    DateFormat.getDateTimeInstance().format(entry.timestamp)
+                )
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+                textSize = 13f
+            }
+            val summaryView = TextView(this).apply {
+                text = entry.summary
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.text_secondary))
+                textSize = 14f
+            }
+            val actionRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                val rowParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                rowParams.topMargin = 16
+                layoutParams = rowParams
+            }
+            val useButton = Button(this).apply {
+                text = getString(R.string.history_action_use_in_create)
+                isAllCaps = false
+                backgroundTintList =
+                    ContextCompat.getColorStateList(this@MainActivity, R.color.button_primary_bg)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.button_primary_text))
+                setOnClickListener {
+                    applyScannedRawValueToCreate(entry.rawValue)
+                }
+            }
+            val copyButton = Button(this).apply {
+                text = getString(R.string.history_action_copy)
+                isAllCaps = false
+                backgroundTintList =
+                    ContextCompat.getColorStateList(this@MainActivity, R.color.button_secondary_bg)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.button_secondary_text))
+                setOnClickListener {
+                    copyToClipboard(entry.title, entry.rawValue)
+                }
+            }
+            val deleteButton = Button(this).apply {
+                text = getString(R.string.history_action_delete)
+                isAllCaps = false
+                backgroundTintList =
+                    ContextCompat.getColorStateList(this@MainActivity, R.color.button_secondary_bg)
+                setTextColor(ContextCompat.getColor(this@MainActivity, R.color.button_secondary_text))
+                setOnClickListener {
+                    scanHistoryStore.delete(entry.id)
+                    renderHistory()
+                }
+            }
+            val weightParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            weightParams.marginEnd = 8
+            useButton.layoutParams = weightParams
+            val copyParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            copyParams.marginStart = 8
+            copyParams.marginEnd = 8
+            copyButton.layoutParams = copyParams
+            val deleteParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            deleteParams.marginStart = 8
+            deleteButton.layoutParams = deleteParams
+
+            actionRow.addView(useButton)
+            actionRow.addView(copyButton)
+            actionRow.addView(deleteButton)
+            card.addView(titleView)
+            card.addView(metaView)
+            card.addView(summaryView)
+            card.addView(actionRow)
+            historyListContainer.addView(card)
+        }
+    }
+
+    private fun confirmClearHistory() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.history_clear_all)
+            .setMessage(R.string.history_clear_confirm)
+            .setPositiveButton(R.string.history_clear_all) { _, _ ->
+                scanHistoryStore.clear()
+                renderHistory()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun addScanToHistory(result: ScanResult, rawValue: String) {
+        when (result) {
+            is ScanResult.Text -> scanHistoryStore.add(
+                type = getString(R.string.scan_result_type_text),
+                title = result.value.take(60),
+                summary = result.value,
+                rawValue = rawValue
+            )
+
+            is ScanResult.Url -> scanHistoryStore.add(
+                type = getString(R.string.scan_result_type_url),
+                title = result.value.take(60),
+                summary = result.value,
+                rawValue = rawValue
+            )
+
+            is ScanResult.Wifi -> scanHistoryStore.add(
+                type = getString(R.string.scan_result_type_wifi),
+                title = result.ssid,
+                summary = getString(
+                    R.string.history_wifi_summary_format,
+                    result.security,
+                    if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no)
+                ),
+                rawValue = rawValue
+            )
+        }
+    }
+
+    private fun applyScannedRawValueToCreate(rawValue: String) {
+        applyScannedResultToCreate(parseScanResult(rawValue))
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -782,9 +971,11 @@ class MainActivity : ComponentActivity() {
         }
         lastScannedRawValue = rawValue
         lastScanTimestampMs = now
+        val parsedResult = parseScanResult(rawValue)
+        addScanToHistory(parsedResult, rawValue)
         runOnUiThread {
             updateScanStatus(getString(R.string.scan_status_detected))
-            updateScanResult(parseScanResult(rawValue))
+            updateScanResult(parsedResult)
             AppTelemetry.logEvent("qr_scanned")
         }
     }

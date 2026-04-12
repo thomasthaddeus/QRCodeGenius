@@ -5,6 +5,7 @@
     <string name="screen_subtitle_accessibility">Crea, previsualiza, guarda y comparte códigos QR personalizados.</string>
     <string name="mode_create">Crear</string>
     <string name="mode_scan">Escanear</string>
+    <string name="mode_history">Historial</string>
     <string name="scan_section_label">Escanear códigos QR</string>
     <string name="scan_section_description">Usa la cámara para escanear texto, enlaces y códigos QR de Wi‑Fi.</string>
     <string name="scan_permission_needed">Se necesita acceso a la cámara para escanear códigos QR.</string>
@@ -35,6 +36,16 @@
     <string name="scan_wifi_connect_title">Conectarse a Wi‑Fi</string>
     <string name="scan_wifi_connect_message">Red: %1$s\nSeguridad: %2$s\nOculta: %3$s\n\nSiguiente paso:\nAbre los ajustes de Wi‑Fi, elige esta red y usa la contraseña copiada si hace falta.</string>
     <string name="scan_unknown_result">Código QR escaneado</string>
+    <string name="history_section_label">Historial de escaneos</string>
+    <string name="history_section_description">Los resultados escaneados recientes se guardan localmente en este dispositivo.</string>
+    <string name="history_empty">Aún no hay historial de escaneos.</string>
+    <string name="history_clear_all">Borrar historial</string>
+    <string name="history_clear_confirm">¿Eliminar todo el historial de escaneos guardado en este dispositivo?</string>
+    <string name="history_action_use_in_create">Usar en Crear</string>
+    <string name="history_action_copy">Copiar</string>
+    <string name="history_action_delete">Eliminar</string>
+    <string name="history_item_meta_format">%1$s • %2$s</string>
+    <string name="history_wifi_summary_format">Seguridad: %1$s • Oculta: %2$s</string>
     <string name="content_type_label">Tipo de contenido</string>
     <string name="enter_text_for_qr_code">Ingresa el texto para el código QR</string>
     <string name="text_field_label">Texto para codificar</string>
