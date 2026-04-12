@@ -9,27 +9,222 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/labelTextField"
+            android:id="@+id/labelContentTypeField"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:labelFor="@id/editTextText"
-            android:text="@string/text_field_label"
+            android:labelFor="@id/textViewSelectedContentType"
+            android:text="@string/content_type_label"
             android:textColor="@color/text_primary"
             android:textSize="14sp"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/editTextText"
+        <LinearLayout
+            android:id="@+id/contentTypeContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:autofillHints=""
             android:background="@drawable/bg_input_surface"
-            android:hint="@string/enter_text_for_qr_code"
-            android:inputType="text"
-            android:minHeight="56dp"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="14dp" />
+            android:contentDescription="@string/pick_content_type_accessibility"
+            android:gravity="center_vertical"
+            android:minHeight="60dp"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/textViewSelectedContentType"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/default_content_type"
+                android:textColor="@color/text_muted"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/buttonPickContentType"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:backgroundTint="@color/button_secondary_bg"
+                android:contentDescription="@string/pick_content_type_accessibility"
+                android:paddingHorizontal="18dp"
+                android:text="@string/content_type_label"
+                android:textAllCaps="false"
+                android:textColor="@color/button_secondary_text" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/textInputContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/labelTextField"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextText"
+                android:text="@string/text_field_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:autofillHints=""
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/enter_text_for_qr_code"
+                android:inputType="text"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/wifiFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/labelWifiSsidField"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextWifiSsid"
+                android:text="@string/wifi_ssid_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextWifiSsid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:autofillHints=""
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/wifi_ssid_hint"
+                android:inputType="text"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:id="@+id/labelWifiPasswordField"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextWifiPassword"
+                android:text="@string/wifi_password_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextWifiPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:autofillHints=""
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/wifi_password_hint"
+                android:inputType="textPassword"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:id="@+id/labelWifiSecurityField"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/textViewSelectedWifiSecurity"
+                android:text="@string/wifi_security_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/wifiSecurityContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:contentDescription="@string/pick_wifi_security_accessibility"
+                android:gravity="center_vertical"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/textViewSelectedWifiSecurity"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/default_wifi_security"
+                    android:textColor="@color/text_muted"
+                    android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/buttonPickWifiSecurity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:backgroundTint="@color/button_secondary_bg"
+                    android:contentDescription="@string/pick_wifi_security_accessibility"
+                    android:paddingHorizontal="18dp"
+                    android:text="@string/wifi_security_label"
+                    android:textAllCaps="false"
+                    android:textColor="@color/button_secondary_text" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/labelWifiHiddenField"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/textViewSelectedWifiHidden"
+                android:text="@string/wifi_hidden_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/wifiHiddenContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:contentDescription="@string/pick_wifi_hidden_accessibility"
+                android:gravity="center_vertical"
+                android:minHeight="60dp"
+                android:orientation="horizontal"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/textViewSelectedWifiHidden"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/default_wifi_hidden_label"
+                    android:textColor="@color/text_muted"
+                    android:textSize="14sp" />
+
+                <Button
+                    android:id="@+id/buttonPickWifiHidden"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:backgroundTint="@color/button_secondary_bg"
+                    android:contentDescription="@string/pick_wifi_hidden_accessibility"
+                    android:paddingHorizontal="18dp"
+                    android:text="@string/wifi_hidden_label"
+                    android:textAllCaps="false"
+                    android:textColor="@color/button_secondary_text" />
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/labelSizeField"

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <TextView
+        android:id="@+id/textViewScanTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:accessibilityHeading="true"
+        android:text="@string/scan_section_label"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textViewScanDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/scan_section_description"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/textViewScanPermissionState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_input_surface"
+        android:padding="14dp"
+        android:text="@string/scan_permission_needed"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/buttonGrantCameraPermission"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_primary_bg"
+        android:text="@string/grant_camera_permission"
+        android:textAllCaps="false"
+        android:textColor="@color/button_primary_text" />
+
+    <FrameLayout
+        android:id="@+id/scannerPreviewFrame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:layout_weight="1"
+        android:background="@drawable/bg_preview_surface">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/previewViewScanner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:implementationMode="compatible"
+            app:scaleType="fillCenter" />
+
+        <View
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_scan_finder_frame"
+            android:importantForAccessibility="no" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/textViewScanStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:accessibilityLiveRegion="polite"
+        android:text="@string/scan_status_idle"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/scanResultContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_preview_surface"
+        android:orientation="vertical"
+        android:padding="18dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textViewScanResultLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:text="@string/scan_result_label"
+            android:textColor="@color/preview_label_text"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textViewScanResultType"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/textViewScanResultValue"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <Button
+            android:id="@+id/buttonScanPrimaryAction"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="@color/button_primary_bg"
+            android:text="@string/scan_action_copy"
+            android:textAllCaps="false"
+            android:textColor="@color/button_primary_text" />
+
+        <Button
+            android:id="@+id/buttonScanSecondaryAction"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="@color/button_secondary_bg"
+            android:text="@string/scan_action_open_wifi_settings"
+            android:textAllCaps="false"
+            android:textColor="@color/button_secondary_text"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/buttonScanUseInCreate"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="@color/button_secondary_bg"
+            android:text="@string/scan_action_use_in_create"
+            android:textAllCaps="false"
+            android:textColor="@color/button_secondary_text"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/buttonResetScan"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:backgroundTint="@color/button_secondary_bg"
+            android:text="@string/scan_action_scan_again"
+            android:textAllCaps="false"
+            android:textColor="@color/button_secondary_text" />
+    </LinearLayout>
+</merge>

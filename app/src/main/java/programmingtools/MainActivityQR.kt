@@ -1,7 +1,12 @@
 package com.programmingtools.app
 
+import android.Manifest
 import android.app.AlertDialog
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -11,6 +16,7 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -18,18 +24,70 @@ import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import androidx.annotation.StringRes
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
+    enum class ScreenMode(@param:StringRes val labelResId: Int) {
+        CREATE(R.string.mode_create),
+        SCAN(R.string.mode_scan)
+    }
+
+    enum class ContentType(@param:StringRes val labelResId: Int) {
+        TEXT(R.string.content_type_text),
+        WIFI(R.string.content_type_wifi);
+
+        companion object {
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): ContentType {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: TEXT
+            }
+        }
+    }
+
+    enum class WifiSecurity(@param:StringRes val labelResId: Int, val wifiValue: String) {
+        WPA_WPA2(R.string.wifi_security_wpa, "WPA"),
+        WEP(R.string.wifi_security_wep, "WEP"),
+        OPEN(R.string.wifi_security_open, "nopass");
+
+        companion object {
+            fun fromLocalizedLabel(value: String, resolver: (Int) -> String): WifiSecurity {
+                return entries.firstOrNull { resolver(it.labelResId) == value } ?: WPA_WPA2
+            }
+        }
+    }
+
+    private sealed class ScanResult {
+        data class Text(val value: String) : ScanResult()
+        data class Url(val value: String) : ScanResult()
+        data class Wifi(
+            val ssid: String,
+            val security: String,
+            val password: String?,
+            val hidden: Boolean
+        ) : ScanResult()
+    }
+
     enum class EyeStyle(@param:StringRes val labelResId: Int) {
         CLASSIC(R.string.eye_style_classic),
         ROUNDED(R.string.eye_style_rounded),
@@ -86,6 +144,12 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         private const val STATE_TEXT = "state_text"
+        private const val STATE_SCREEN_MODE = "state_screen_mode"
+        private const val STATE_CONTENT_TYPE = "state_content_type"
+        private const val STATE_WIFI_SSID = "state_wifi_ssid"
+        private const val STATE_WIFI_PASSWORD = "state_wifi_password"
+        private const val STATE_WIFI_SECURITY = "state_wifi_security"
+        private const val STATE_WIFI_HIDDEN = "state_wifi_hidden"
         private const val STATE_SIZE = "state_size"
         private const val STATE_SAVE_FORMAT = "state_save_format"
         private const val STATE_DESIGN_STYLE = "state_design_style"
@@ -96,12 +160,33 @@ class MainActivity : ComponentActivity() {
         private const val STATE_COLOR = "state_color"
         private const val STATE_BACKGROUND_COLOR = "state_background_color"
         private const val STATE_HAS_QR = "state_has_qr"
+        private const val SCAN_RESULT_COOLDOWN_MS = 2_000L
     }
 
     private lateinit var imageViewQRCode: ImageView
+    private lateinit var createModeContainer: View
+    private lateinit var scanModeContainer: View
+    private lateinit var buttonModeCreate: Button
+    private lateinit var buttonModeScan: Button
+    private lateinit var previewViewScanner: PreviewView
+    private lateinit var buttonGrantCameraPermission: Button
+    private lateinit var buttonResetScan: Button
+    private lateinit var textViewScanPermissionState: TextView
+    private lateinit var textViewScanStatus: TextView
+    private lateinit var scanResultContainer: View
+    private lateinit var textViewScanResultType: TextView
+    private lateinit var textViewScanResultValue: TextView
+    private lateinit var buttonScanPrimaryAction: Button
+    private lateinit var buttonScanSecondaryAction: Button
+    private lateinit var buttonScanUseInCreate: Button
     private lateinit var editText: EditText
+    private lateinit var editTextWifiSsid: EditText
+    private lateinit var editTextWifiPassword: EditText
     private lateinit var editTextSize: EditText
     private lateinit var editTextSaveText: EditText
+    private lateinit var buttonPickContentType: Button
+    private lateinit var buttonPickWifiSecurity: Button
+    private lateinit var buttonPickWifiHidden: Button
     private lateinit var buttonPickLogo: Button
     private lateinit var buttonClearLogo: Button
     private lateinit var buttonPickEyeStyle: Button
@@ -116,6 +201,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var buttonViewSample: Button
     private lateinit var viewSelectedColor: View
     private lateinit var viewSelectedBackgroundColor: View
+    private lateinit var textViewSelectedContentType: TextView
+    private lateinit var textViewSelectedWifiSecurity: TextView
+    private lateinit var textViewSelectedWifiHidden: TextView
     private lateinit var textViewSelectedLogo: TextView
     private lateinit var textViewSelectedEyeStyle: TextView
     private lateinit var textViewSelectedCenterBadge: TextView
@@ -124,9 +212,22 @@ class MainActivity : ComponentActivity() {
     private lateinit var textViewSelectedColor: TextView
     private lateinit var textViewSelectedBackgroundColor: TextView
     private lateinit var textViewPreviewStatus: TextView
+    private lateinit var textInputContainer: View
+    private lateinit var wifiFieldsContainer: View
     private var generatedBitmap: Bitmap? = null
     private var pendingSaveBitmap: Bitmap? = null
+    private var currentScreenMode: ScreenMode = ScreenMode.CREATE
+    private var currentContentType: ContentType = ContentType.TEXT
+    private var currentWifiSecurity: WifiSecurity = WifiSecurity.WPA_WPA2
+    private var currentWifiHidden: Boolean = false
     private var currentLogoUri: Uri? = null
+    private var lastScannedRawValue: String? = null
+    private var lastScanTimestampMs: Long = 0L
+    private var lastScanAction: (() -> Unit)? = null
+    private var lastSecondaryScanAction: (() -> Unit)? = null
+    private var useInCreateAction: (() -> Unit)? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private lateinit var cameraExecutor: ExecutorService
     private var currentEyeStyle: EyeStyle = EyeStyle.CLASSIC
     private var currentCenterBadge: CenterBadge = CenterBadge.NONE
     private var currentDesignStyle: DesignStyle = DesignStyle.MINIMAL
@@ -145,6 +246,19 @@ class MainActivity : ComponentActivity() {
             }
             pendingSaveBitmap = null
             pendingSaveFormat = SaveFormat.PNG
+        }
+
+    private val requestCameraPermission =
+        registerForActivityResult(RequestPermission()) { granted ->
+            if (granted) {
+                updateScanPermissionUi(granted = true)
+                if (currentScreenMode == ScreenMode.SCAN) {
+                    startScanner()
+                }
+            } else {
+                updateScanPermissionUi(granted = false)
+                updateScanStatus(getString(R.string.scan_status_permission_denied))
+            }
         }
 
     private val openLogoDocument =
@@ -169,11 +283,32 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        cameraExecutor = Executors.newSingleThreadExecutor()
 
+        createModeContainer = findViewById(R.id.createModeContainer)
+        scanModeContainer = findViewById(R.id.scanModeContainer)
+        buttonModeCreate = findViewById(R.id.buttonModeCreate)
+        buttonModeScan = findViewById(R.id.buttonModeScan)
+        previewViewScanner = findViewById(R.id.previewViewScanner)
+        buttonGrantCameraPermission = findViewById(R.id.buttonGrantCameraPermission)
+        buttonResetScan = findViewById(R.id.buttonResetScan)
+        textViewScanPermissionState = findViewById(R.id.textViewScanPermissionState)
+        textViewScanStatus = findViewById(R.id.textViewScanStatus)
+        scanResultContainer = findViewById(R.id.scanResultContainer)
+        textViewScanResultType = findViewById(R.id.textViewScanResultType)
+        textViewScanResultValue = findViewById(R.id.textViewScanResultValue)
+        buttonScanPrimaryAction = findViewById(R.id.buttonScanPrimaryAction)
+        buttonScanSecondaryAction = findViewById(R.id.buttonScanSecondaryAction)
+        buttonScanUseInCreate = findViewById(R.id.buttonScanUseInCreate)
         imageViewQRCode = findViewById(R.id.imageViewQRCode)
         editText = findViewById(R.id.editTextText)
+        editTextWifiSsid = findViewById(R.id.editTextWifiSsid)
+        editTextWifiPassword = findViewById(R.id.editTextWifiPassword)
         editTextSize = findViewById(R.id.editTextSize)
         editTextSaveText = findViewById(R.id.editTextSaveText)
+        buttonPickContentType = findViewById(R.id.buttonPickContentType)
+        buttonPickWifiSecurity = findViewById(R.id.buttonPickWifiSecurity)
+        buttonPickWifiHidden = findViewById(R.id.buttonPickWifiHidden)
         buttonPickLogo = findViewById(R.id.buttonPickLogo)
         buttonClearLogo = findViewById(R.id.buttonClearLogo)
         buttonPickEyeStyle = findViewById(R.id.buttonPickEyeStyle)
@@ -188,6 +323,9 @@ class MainActivity : ComponentActivity() {
         buttonViewSample = findViewById(R.id.buttonViewSample)
         viewSelectedColor = findViewById(R.id.viewSelectedColor)
         viewSelectedBackgroundColor = findViewById(R.id.viewSelectedBackgroundColor)
+        textViewSelectedContentType = findViewById(R.id.textViewSelectedContentType)
+        textViewSelectedWifiSecurity = findViewById(R.id.textViewSelectedWifiSecurity)
+        textViewSelectedWifiHidden = findViewById(R.id.textViewSelectedWifiHidden)
         textViewSelectedLogo = findViewById(R.id.textViewSelectedLogo)
         textViewSelectedEyeStyle = findViewById(R.id.textViewSelectedEyeStyle)
         textViewSelectedCenterBadge = findViewById(R.id.textViewSelectedCenterBadge)
@@ -196,7 +334,16 @@ class MainActivity : ComponentActivity() {
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
         textViewSelectedBackgroundColor = findViewById(R.id.textViewSelectedBackgroundColor)
         textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
+        textInputContainer = findViewById(R.id.textInputContainer)
+        wifiFieldsContainer = findViewById(R.id.wifiFieldsContainer)
 
+        updateSelectedContentType(
+            ContentType.fromLocalizedLabel(getString(R.string.default_content_type), ::getString)
+        )
+        updateSelectedWifiSecurity(
+            WifiSecurity.fromLocalizedLabel(getString(R.string.default_wifi_security), ::getString)
+        )
+        updateSelectedWifiHidden(getString(R.string.default_wifi_hidden).toBoolean())
         updateSelectedLogo(null)
         updateSelectedEyeStyle(
             EyeStyle.fromLocalizedLabel(getString(R.string.default_eye_style), ::getString)
@@ -216,10 +363,42 @@ class MainActivity : ComponentActivity() {
         updateSelectedColor(Color.parseColor(getString(R.string.default_qr_color)))
         updateSelectedBackgroundColor(Color.parseColor(getString(R.string.default_qr_background_color)))
         updatePreviewState(hasPreview = false)
+        updateScanPermissionUi(hasCameraPermission())
+        updateScanStatus(getString(R.string.scan_status_idle))
+        updateScanResult(null)
+        updateScreenMode(ScreenMode.CREATE)
+
+        buttonModeCreate.setOnClickListener {
+            updateScreenMode(ScreenMode.CREATE)
+        }
+
+        buttonModeScan.setOnClickListener {
+            updateScreenMode(ScreenMode.SCAN)
+        }
+
+        buttonGrantCameraPermission.setOnClickListener {
+            requestCameraPermissionIfNeeded()
+        }
+
+        buttonScanPrimaryAction.setOnClickListener {
+            lastScanAction?.invoke()
+        }
+
+        buttonScanSecondaryAction.setOnClickListener {
+            lastSecondaryScanAction?.invoke()
+        }
+
+        buttonScanUseInCreate.setOnClickListener {
+            useInCreateAction?.invoke()
+        }
+
+        buttonResetScan.setOnClickListener {
+            resetScanResult()
+        }
 
         buttonGenerate.setOnClickListener {
             if (!renderQrFromInputs(showValidationError = true)) {
-                AppTelemetry.logEvent("generate_attempted_empty_text")
+                AppTelemetry.logEvent("generate_attempted_invalid_input")
                 return@setOnClickListener
             }
         }
@@ -287,6 +466,18 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        buttonPickContentType.setOnClickListener {
+            showContentTypeDialog()
+        }
+
+        buttonPickWifiSecurity.setOnClickListener {
+            showWifiSecurityDialog()
+        }
+
+        buttonPickWifiHidden.setOnClickListener {
+            toggleWifiHidden()
+        }
+
         buttonPickLogo.setOnClickListener {
             openLogoDocument.launch(arrayOf("image/*"))
         }
@@ -315,7 +506,11 @@ class MainActivity : ComponentActivity() {
         }
 
         buttonViewSample.setOnClickListener {
-            val sampleText = getString(R.string.sample_qr_text)
+            val sampleText = if (selectedContentType() == ContentType.WIFI) {
+                getString(R.string.sample_wifi_qr_text)
+            } else {
+                getString(R.string.sample_qr_text)
+            }
             val sampleSize = 256
             val sampleColor = selectedColor
             val sampleBitmap =
@@ -338,7 +533,17 @@ class MainActivity : ComponentActivity() {
         }
 
         if (savedInstanceState != null) {
+            savedInstanceState.getString(STATE_SCREEN_MODE)?.let { modeValue ->
+                currentScreenMode = ScreenMode.entries.firstOrNull {
+                    getString(it.labelResId) == modeValue
+                } ?: ScreenMode.CREATE
+            }
             editText.setText(savedInstanceState.getString(STATE_TEXT).orEmpty())
+            editTextWifiSsid.setText(savedInstanceState.getString(STATE_WIFI_SSID).orEmpty())
+            editTextWifiPassword.setText(savedInstanceState.getString(STATE_WIFI_PASSWORD).orEmpty())
+            restoreContentType(savedInstanceState.getString(STATE_CONTENT_TYPE).orEmpty())
+            restoreWifiSecurity(savedInstanceState.getString(STATE_WIFI_SECURITY).orEmpty())
+            updateSelectedWifiHidden(savedInstanceState.getBoolean(STATE_WIFI_HIDDEN))
             editTextSize.setText(savedInstanceState.getString(STATE_SIZE).orEmpty())
             restoreSaveFormat(savedInstanceState.getString(STATE_SAVE_FORMAT).orEmpty())
             restoreDesignStyle(savedInstanceState.getString(STATE_DESIGN_STYLE).orEmpty())
@@ -356,6 +561,8 @@ class MainActivity : ComponentActivity() {
             if (savedInstanceState.getBoolean(STATE_HAS_QR)) {
                 renderQrFromInputs(showValidationError = false)
             }
+
+            updateScreenMode(currentScreenMode)
         }
     }
 
@@ -392,9 +599,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onDestroy() {
+        cameraProvider?.unbindAll()
+        cameraExecutor.shutdown()
+        super.onDestroy()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
+        outState.putString(STATE_SCREEN_MODE, getString(currentScreenMode.labelResId))
         outState.putString(STATE_TEXT, editText.text.toString())
+        outState.putString(STATE_CONTENT_TYPE, getString(selectedContentType().labelResId))
+        outState.putString(STATE_WIFI_SSID, editTextWifiSsid.text.toString())
+        outState.putString(STATE_WIFI_PASSWORD, editTextWifiPassword.text.toString())
+        outState.putString(STATE_WIFI_SECURITY, getString(selectedWifiSecurity().labelResId))
+        outState.putBoolean(STATE_WIFI_HIDDEN, currentWifiHidden)
         outState.putString(STATE_SIZE, editTextSize.text.toString())
         outState.putString(STATE_SAVE_FORMAT, getString(selectedSaveFormat().labelResId))
         outState.putString(STATE_DESIGN_STYLE, getString(selectedDesignStyle().labelResId))
@@ -444,8 +663,372 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun updateScreenMode(screenMode: ScreenMode) {
+        currentScreenMode = screenMode
+        val isCreate = screenMode == ScreenMode.CREATE
+        createModeContainer.visibility = if (isCreate) View.VISIBLE else View.GONE
+        scanModeContainer.visibility = if (isCreate) View.GONE else View.VISIBLE
+        buttonModeCreate.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (isCreate) R.color.button_primary_bg else R.color.button_secondary_bg
+            )
+        buttonModeScan.backgroundTintList =
+            ContextCompat.getColorStateList(
+                this,
+                if (isCreate) R.color.button_secondary_bg else R.color.button_primary_bg
+            )
+        buttonModeCreate.setTextColor(
+            ContextCompat.getColor(
+                this,
+                if (isCreate) R.color.button_primary_text else R.color.button_secondary_text
+            )
+        )
+        buttonModeScan.setTextColor(
+            ContextCompat.getColor(
+                this,
+                if (isCreate) R.color.button_secondary_text else R.color.button_primary_text
+            )
+        )
+
+        if (isCreate) {
+            stopScanner()
+        } else {
+            resetScanResult()
+            if (hasCameraPermission()) {
+                updateScanPermissionUi(granted = true)
+                startScanner()
+            } else {
+                updateScanPermissionUi(granted = false)
+                updateScanStatus(getString(R.string.scan_permission_needed))
+            }
+        }
+    }
+
+    private fun hasCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestCameraPermissionIfNeeded() {
+        if (hasCameraPermission()) {
+            updateScanPermissionUi(granted = true)
+            startScanner()
+        } else {
+            requestCameraPermission.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    private fun updateScanPermissionUi(granted: Boolean) {
+        textViewScanPermissionState.text = getString(
+            if (granted) R.string.scan_permission_ready else R.string.scan_permission_needed
+        )
+        buttonGrantCameraPermission.visibility = if (granted) View.GONE else View.VISIBLE
+        previewViewScanner.visibility = if (granted) View.VISIBLE else View.INVISIBLE
+    }
+
+    private fun updateScanStatus(status: String) {
+        textViewScanStatus.text = status
+    }
+
+    private fun startScanner() {
+        if (!hasCameraPermission()) {
+            return
+        }
+        resetScanResult()
+        updateScanStatus(getString(R.string.scan_status_searching))
+        val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
+            ProcessCameraProvider.getInstance(this)
+        cameraProviderFuture.addListener(
+            {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases()
+            },
+            ContextCompat.getMainExecutor(this)
+        )
+    }
+
+    private fun stopScanner() {
+        cameraProvider?.unbindAll()
+        updateScanStatus(getString(R.string.scan_status_idle))
+    }
+
+    private fun bindCameraUseCases() {
+        val provider = cameraProvider ?: return
+        val preview = androidx.camera.core.Preview.Builder().build().also {
+            it.setSurfaceProvider(previewViewScanner.surfaceProvider)
+        }
+        val analyzer = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also { analysis ->
+                analysis.setAnalyzer(cameraExecutor, QrCodeAnalyzer(::handleScannedBarcode))
+            }
+        try {
+            provider.unbindAll()
+            provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analyzer)
+        } catch (e: Exception) {
+            AppTelemetry.recordNonFatal("scanner_bind_failed", e)
+            updateScanStatus(getString(R.string.scan_status_idle))
+        }
+    }
+
+    private fun handleScannedBarcode(rawValue: String) {
+        val now = System.currentTimeMillis()
+        if (rawValue == lastScannedRawValue && now - lastScanTimestampMs < SCAN_RESULT_COOLDOWN_MS) {
+            return
+        }
+        lastScannedRawValue = rawValue
+        lastScanTimestampMs = now
+        runOnUiThread {
+            updateScanStatus(getString(R.string.scan_status_detected))
+            updateScanResult(parseScanResult(rawValue))
+            AppTelemetry.logEvent("qr_scanned")
+        }
+    }
+
+    private fun updateScanResult(result: ScanResult?) {
+        if (result == null) {
+            scanResultContainer.visibility = View.GONE
+            lastScanAction = null
+            lastSecondaryScanAction = null
+            useInCreateAction = null
+            buttonScanSecondaryAction.visibility = View.GONE
+            buttonScanUseInCreate.visibility = View.GONE
+            return
+        }
+
+        scanResultContainer.visibility = View.VISIBLE
+        when (result) {
+            is ScanResult.Text -> {
+                textViewScanResultType.text = getString(R.string.scan_result_type_text)
+                textViewScanResultValue.text = result.value
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_copy)
+                lastScanAction = {
+                    copyToClipboard(getString(R.string.scan_result_type_text), result.value)
+                }
+                buttonScanSecondaryAction.visibility = View.GONE
+                lastSecondaryScanAction = null
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Url -> {
+                textViewScanResultType.text = getString(R.string.scan_result_type_url)
+                textViewScanResultValue.text = result.value
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_open_link)
+                lastScanAction = {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(result.value)))
+                    } catch (_: Exception) {
+                        Toast.makeText(this, getString(R.string.scan_link_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.scan_result_type_url), result.value)
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Wifi -> {
+                textViewScanResultType.text = getString(R.string.scan_result_type_wifi)
+                textViewScanResultValue.text = getString(
+                    R.string.scan_wifi_result_format,
+                    result.ssid,
+                    result.security,
+                    if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no),
+                    result.password ?: getString(R.string.scan_wifi_password_open)
+                )
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_connect_wifi)
+                lastScanAction = {
+                    showWifiConnectDialog(result)
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(
+                    if (result.password.isNullOrBlank()) {
+                        R.string.scan_action_copy
+                    } else {
+                        R.string.scan_action_copy_password
+                    }
+                )
+                lastSecondaryScanAction = {
+                    if (result.password.isNullOrBlank()) {
+                        copyToClipboard(
+                            getString(R.string.scan_result_type_wifi),
+                            textViewScanResultValue.text.toString()
+                        )
+                    } else {
+                        copyToClipboard(
+                            getString(R.string.wifi_password_label),
+                            result.password,
+                            R.string.scan_password_copy_success
+                        )
+                    }
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+        }
+    }
+
+    private fun resetScanResult() {
+        lastScannedRawValue = null
+        lastScanTimestampMs = 0L
+        updateScanResult(null)
+        updateScanStatus(
+            if (hasCameraPermission()) getString(R.string.scan_status_searching)
+            else getString(R.string.scan_status_idle)
+        )
+    }
+
+    private fun applyScannedResultToCreate(result: ScanResult) {
+        when (result) {
+            is ScanResult.Text -> {
+                updateSelectedContentType(ContentType.TEXT)
+                editText.setText(result.value)
+            }
+
+            is ScanResult.Url -> {
+                updateSelectedContentType(ContentType.TEXT)
+                editText.setText(result.value)
+            }
+
+            is ScanResult.Wifi -> {
+                updateSelectedContentType(ContentType.WIFI)
+                editTextWifiSsid.setText(result.ssid)
+                editTextWifiPassword.setText(result.password.orEmpty())
+                val security = when (result.security.uppercase()) {
+                    "WEP" -> WifiSecurity.WEP
+                    "NOPASS", "OPEN" -> WifiSecurity.OPEN
+                    else -> WifiSecurity.WPA_WPA2
+                }
+                updateSelectedWifiSecurity(security)
+                updateSelectedWifiHidden(result.hidden)
+            }
+        }
+        updateScreenMode(ScreenMode.CREATE)
+        Toast.makeText(this, getString(R.string.scan_sent_to_create), Toast.LENGTH_LONG).show()
+    }
+
+    private fun parseScanResult(rawValue: String): ScanResult {
+        parseWifiQr(rawValue)?.let { return it }
+        return if (rawValue.startsWith("http://") || rawValue.startsWith("https://")) {
+            ScanResult.Url(rawValue)
+        } else {
+            ScanResult.Text(rawValue)
+        }
+    }
+
+    private fun parseWifiQr(rawValue: String): ScanResult.Wifi? {
+        if (!rawValue.startsWith("WIFI:")) {
+            return null
+        }
+        val body = rawValue.removePrefix("WIFI:")
+        val tokens = mutableListOf<String>()
+        val current = StringBuilder()
+        var escaped = false
+        body.forEach { char ->
+            when {
+                escaped -> {
+                    current.append(char)
+                    escaped = false
+                }
+
+                char == '\\' -> escaped = true
+                char == ';' -> {
+                    tokens += current.toString()
+                    current.clear()
+                }
+
+                else -> current.append(char)
+            }
+        }
+        if (current.isNotEmpty()) {
+            tokens += current.toString()
+        }
+        val values = tokens.mapNotNull { token ->
+            val separator = token.indexOf(':')
+            if (separator <= 0) null else token.substring(0, separator) to token.substring(separator + 1)
+        }.toMap()
+        val ssid = values["S"] ?: return null
+        val security = values["T"].orEmpty().ifBlank { getString(R.string.wifi_security_open) }
+        val password = values["P"]
+        val hidden = values["H"]?.equals("true", ignoreCase = true) == true
+        return ScanResult.Wifi(
+            ssid = ssid,
+            security = security,
+            password = if (password.isNullOrBlank()) null else password,
+            hidden = hidden
+        )
+    }
+
+    private fun copyToClipboard(label: String, value: String) {
+        copyToClipboard(label, value, R.string.scan_copy_success)
+    }
+
+    private fun copyToClipboard(label: String, value: String, @StringRes messageResId: Int) {
+        val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboardManager.setPrimaryClip(ClipData.newPlainText(label, value))
+        Toast.makeText(this, getString(messageResId), Toast.LENGTH_LONG).show()
+    }
+
+    private fun showWifiConnectDialog(result: ScanResult.Wifi) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.scan_wifi_connect_title)
+            .setMessage(
+                getString(
+                    R.string.scan_wifi_connect_message,
+                    result.ssid,
+                    result.security,
+                    if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no)
+                )
+            )
+            .setPositiveButton(R.string.scan_action_open_wifi_settings) { _, _ ->
+                startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
+            }
+            .setNeutralButton(
+                if (result.password.isNullOrBlank()) R.string.scan_action_copy
+                else R.string.scan_action_copy_password
+            ) { _, _ ->
+                if (result.password.isNullOrBlank()) {
+                    copyToClipboard(
+                        getString(R.string.scan_result_type_wifi),
+                        textViewScanResultValue.text.toString()
+                    )
+                } else {
+                    copyToClipboard(
+                        getString(R.string.wifi_password_label),
+                        result.password,
+                        R.string.scan_password_copy_success
+                    )
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun selectedSaveFormat(): SaveFormat {
         return currentSaveFormat
+    }
+
+    private fun selectedContentType(): ContentType {
+        return currentContentType
+    }
+
+    private fun selectedWifiSecurity(): WifiSecurity {
+        return currentWifiSecurity
     }
 
     private fun selectedDesignStyle(): DesignStyle {
@@ -470,6 +1053,24 @@ class MainActivity : ComponentActivity() {
             AppTelemetry.recordNonFatal("logo_decode_failed", e)
             null
         }
+    }
+
+    private fun restoreContentType(value: String) {
+        updateSelectedContentType(
+            ContentType.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_content_type) },
+                ::getString
+            )
+        )
+    }
+
+    private fun restoreWifiSecurity(value: String) {
+        updateSelectedWifiSecurity(
+            WifiSecurity.fromLocalizedLabel(
+                value.ifBlank { getString(R.string.default_wifi_security) },
+                ::getString
+            )
+        )
     }
 
     private fun restoreSaveFormat(value: String) {
@@ -520,6 +1121,48 @@ class MainActivity : ComponentActivity() {
         return "QRCode.${saveFormat.fileExtension}"
     }
 
+    private fun updateSelectedContentType(contentType: ContentType) {
+        currentContentType = contentType
+        textViewSelectedContentType.text = getString(
+            R.string.selected_content_type_format,
+            getString(contentType.labelResId)
+        )
+        syncContentTypeUi()
+    }
+
+    private fun updateSelectedWifiSecurity(wifiSecurity: WifiSecurity) {
+        currentWifiSecurity = wifiSecurity
+        textViewSelectedWifiSecurity.text = getString(
+            R.string.selected_wifi_security_format,
+            getString(wifiSecurity.labelResId)
+        )
+    }
+
+    private fun updateSelectedWifiHidden(isHidden: Boolean) {
+        currentWifiHidden = isHidden
+        textViewSelectedWifiHidden.text = getString(
+            R.string.selected_wifi_hidden_format,
+            getString(if (isHidden) R.string.wifi_hidden_yes else R.string.wifi_hidden_no)
+        )
+    }
+
+    private fun toggleWifiHidden() {
+        updateSelectedWifiHidden(!currentWifiHidden)
+        AppTelemetry.logEvent("wifi_hidden_toggled", mapOf("hidden" to currentWifiHidden.toString()))
+        announceAccessibilityMessage(
+            getString(
+                R.string.wifi_hidden_changed_announcement,
+                getString(if (currentWifiHidden) R.string.wifi_hidden_yes else R.string.wifi_hidden_no)
+            )
+        )
+    }
+
+    private fun syncContentTypeUi() {
+        val isWifi = selectedContentType() == ContentType.WIFI
+        textInputContainer.visibility = if (isWifi) View.GONE else View.VISIBLE
+        wifiFieldsContainer.visibility = if (isWifi) View.VISIBLE else View.GONE
+    }
+
     private fun updateSelectedDesignStyle(designStyle: DesignStyle) {
         currentDesignStyle = designStyle
         textViewSelectedDesignStyle.text = getString(
@@ -567,21 +1210,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderQrFromInputs(showValidationError: Boolean): Boolean {
-        val text = editText.text.toString().trim()
-        if (text.isEmpty()) {
+        val qrContent = buildQrContent(showValidationError) ?: run {
             imageViewQRCode.setImageDrawable(null)
             generatedBitmap = null
             updatePreviewState(hasPreview = false)
-            if (showValidationError) {
-                Toast.makeText(this, getString(R.string.enter_text_error), Toast.LENGTH_LONG).show()
-            }
             return false
         }
 
         val size = editTextSize.text.toString().toIntOrNull() ?: 256
         val color = selectedColor
         val qrBitmap = qrCodeGenerator.generateQRCode(
-            text = text,
+            text = qrContent,
             width = size,
             height = size,
             foregroundColor = color,
@@ -598,12 +1237,15 @@ class MainActivity : ComponentActivity() {
             "qr_generated",
             mapOf(
                 "size" to size.toString(),
+                "content_type" to getString(selectedContentType().labelResId),
                 "color" to formatColor(color),
                 "background_color" to formatColor(selectedBackgroundColor),
                 "design_style" to getString(selectedDesignStyle().labelResId),
                 "eye_style" to getString(selectedEyeStyle().labelResId),
                 "center_badge" to getString(selectedCenterBadge().labelResId),
                 "has_logo" to (currentLogoUri != null).toString(),
+                "wifi_security" to getString(selectedWifiSecurity().labelResId),
+                "wifi_hidden" to currentWifiHidden.toString(),
                 "has_caption" to editTextSaveText.text.toString().trim().isNotEmpty().toString()
             )
         )
@@ -611,6 +1253,79 @@ class MainActivity : ComponentActivity() {
             announceAccessibilityMessage(getString(R.string.qr_generated_announcement))
         }
         return true
+    }
+
+    private fun buildQrContent(showValidationError: Boolean): String? {
+        return when (selectedContentType()) {
+            ContentType.TEXT -> {
+                val text = editText.text.toString().trim()
+                if (text.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_text_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    null
+                } else {
+                    text
+                }
+            }
+
+            ContentType.WIFI -> {
+                val ssid = editTextWifiSsid.text.toString().trim()
+                val password = editTextWifiPassword.text.toString()
+                val security = selectedWifiSecurity()
+                if (ssid.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_wifi_ssid_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                if (security != WifiSecurity.OPEN && password.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_wifi_password_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                buildWifiQrPayload(ssid, password, security, currentWifiHidden)
+            }
+        }
+    }
+
+    private fun buildWifiQrPayload(
+        ssid: String,
+        password: String,
+        security: WifiSecurity,
+        isHidden: Boolean
+    ): String {
+        return buildString {
+            append("WIFI:")
+            append("T:")
+            append(security.wifiValue)
+            append(';')
+            append("S:")
+            append(escapeWifiValue(ssid))
+            append(';')
+            if (security != WifiSecurity.OPEN) {
+                append("P:")
+                append(escapeWifiValue(password))
+                append(';')
+            }
+            if (isHidden) {
+                append("H:true;")
+            }
+            append(';')
+        }
+    }
+
+    private fun escapeWifiValue(value: String): String {
+        return value
+            .replace("\\", "\\\\")
+            .replace(";", "\\;")
+            .replace(",", "\\,")
+            .replace(":", "\\:")
+            .replace("\"", "\\\"")
     }
 
     private fun parseQrColor(colorValue: String): Int {
@@ -652,8 +1367,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun rerenderCurrentQrIfPossible() {
-        if (generatedBitmap != null && editText.text.toString().trim().isNotEmpty()) {
+        if (generatedBitmap != null && hasAnyInputForSelectedContentType()) {
             renderQrFromInputs(showValidationError = false)
+        }
+    }
+
+    private fun hasAnyInputForSelectedContentType(): Boolean {
+        return when (selectedContentType()) {
+            ContentType.TEXT -> editText.text.toString().trim().isNotEmpty()
+            ContentType.WIFI -> editTextWifiSsid.text.toString().trim().isNotEmpty()
         }
     }
 
@@ -734,6 +1456,58 @@ class MainActivity : ComponentActivity() {
                     getString(
                         R.string.save_format_changed_announcement,
                         getString(formats[which].labelResId)
+                    )
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showContentTypeDialog() {
+        val contentTypes = ContentType.entries.toTypedArray()
+        val labels = contentTypes.map { getString(it.labelResId) }.toTypedArray()
+        val selectedIndex = contentTypes.indexOf(selectedContentType()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.content_type_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedContentType(contentTypes[which])
+                rerenderCurrentQrIfPossible()
+                AppTelemetry.logEvent(
+                    "content_type_changed",
+                    mapOf("content_type" to getString(contentTypes[which].labelResId))
+                )
+                announceAccessibilityMessage(
+                    getString(
+                        R.string.content_type_changed_announcement,
+                        getString(contentTypes[which].labelResId)
+                    )
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showWifiSecurityDialog() {
+        val securityOptions = WifiSecurity.entries.toTypedArray()
+        val labels = securityOptions.map { getString(it.labelResId) }.toTypedArray()
+        val selectedIndex = securityOptions.indexOf(selectedWifiSecurity()).coerceAtLeast(0)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.wifi_security_picker_title)
+            .setSingleChoiceItems(labels, selectedIndex) { dialog, which ->
+                updateSelectedWifiSecurity(securityOptions[which])
+                rerenderCurrentQrIfPossible()
+                AppTelemetry.logEvent(
+                    "wifi_security_changed",
+                    mapOf("wifi_security" to getString(securityOptions[which].labelResId))
+                )
+                announceAccessibilityMessage(
+                    getString(
+                        R.string.wifi_security_changed_announcement,
+                        getString(securityOptions[which].labelResId)
                     )
                 )
                 dialog.dismiss()
@@ -1176,5 +1950,35 @@ class QRCodeGenerator {
         }
 
         return output
+    }
+}
+
+private class QrCodeAnalyzer(
+    private val onQrDetected: (String) -> Unit
+) : ImageAnalysis.Analyzer {
+    private val scanner = BarcodeScanning.getClient()
+
+    override fun analyze(imageProxy: ImageProxy) {
+        val mediaImage = imageProxy.image
+        if (mediaImage == null) {
+            imageProxy.close()
+            return
+        }
+
+        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+        scanner.process(image)
+            .addOnSuccessListener { barcodes ->
+                handleBarcodes(barcodes)
+            }
+            .addOnCompleteListener {
+                imageProxy.close()
+            }
+    }
+
+    private fun handleBarcodes(barcodes: List<Barcode>) {
+        val firstSupported = barcodes.firstOrNull { barcode ->
+            !barcode.rawValue.isNullOrBlank() && barcode.format == Barcode.FORMAT_QR_CODE
+        }
+        firstSupported?.rawValue?.let(onQrDetected)
     }
 }

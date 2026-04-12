@@ -1,6 +1,5 @@
 # Android QR Code Generator
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,16 +10,13 @@
     <form action="YOUR_SERVER_ENDPOINT" method="post">
         <label for="name">Name:</label><br>
         <input type="text" id="name" name="name" required><br>
-
         <label for="email">Email:</label><br>
         <input type="email" id="email" name="email" required><br>
-
         <label for="interest">I am interested in:</label><br>
         <select id="interest" name="interest">
             <option value="beta_testing">Beta Testing</option>
             <option value="app_updates">General App Updates</option>
         </select><br>
-
         <input type="submit" value="Submit">
     </form>
 </body>
@@ -55,9 +51,9 @@ The Android QR Code Generator is a versatile app that allows users to create cus
 
 1. Clone the repository:
 
-   ```bash
-   git clone https://github.com/thomasthaddeus/qrcode_generator.git
-   ```
+    ```bash
+    git clone https://github.com/thomasthaddeus/qrcode_generator.git
+    ```
 
 2. Open the project in Android Studio.
 3. Synchronize the project with Gradle files.
