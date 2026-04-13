@@ -35,6 +35,8 @@
     <string name="scan_wifi_password_open">No se requiere contraseña</string>
     <string name="scan_wifi_connect_title">Conectarse a Wi‑Fi</string>
     <string name="scan_wifi_connect_message">Red: %1$s\nSeguridad: %2$s\nOculta: %3$s\n\nSiguiente paso:\nAbre los ajustes de Wi‑Fi, elige esta red y usa la contraseña copiada si hace falta.</string>
+    <string name="scan_wifi_suggestion_added">La red Wi‑Fi se compartió con Android. Abre Wi‑Fi para conectarte si se te pide.</string>
+    <string name="scan_wifi_suggestion_failed">No se pudo compartir esta red Wi‑Fi directamente. Abrir los ajustes de Wi‑Fi es la mejor alternativa.</string>
     <string name="scan_unknown_result">Código QR escaneado</string>
     <string name="history_section_label">Historial de escaneos</string>
     <string name="history_section_description">Los resultados escaneados recientes se guardan localmente en este dispositivo.</string>

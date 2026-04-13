@@ -35,6 +35,8 @@
     <string name="scan_wifi_password_open">No password required</string>
     <string name="scan_wifi_connect_title">Connect to Wi-Fi</string>
     <string name="scan_wifi_connect_message">Network: %1$s\nSecurity: %2$s\nHidden: %3$s\n\nNext step:\nOpen Wi-Fi settings, choose this network, and use the copied password if needed.</string>
+    <string name="scan_wifi_suggestion_added">Wi-Fi network shared with Android. Open Wi-Fi to connect if prompted.</string>
+    <string name="scan_wifi_suggestion_failed">Could not share this Wi-Fi network directly. Opening Wi-Fi settings is the best fallback.</string>
     <string name="scan_unknown_result">Scanned QR code</string>
     <string name="history_section_label">Scan History</string>
     <string name="history_section_description">Recent scanned results are stored locally on this device.</string>
