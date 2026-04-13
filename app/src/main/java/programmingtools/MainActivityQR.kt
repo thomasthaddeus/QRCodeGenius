@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.annotation.StringRes
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSuggestion
+import android.provider.ContactsContract
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -62,7 +63,12 @@ class MainActivity : ComponentActivity() {
 
     enum class ContentType(@param:StringRes val labelResId: Int) {
         TEXT(R.string.content_type_text),
-        WIFI(R.string.content_type_wifi);
+        WIFI(R.string.content_type_wifi),
+        PHONE(R.string.content_type_phone),
+        EMAIL(R.string.content_type_email),
+        SMS(R.string.content_type_sms),
+        GEO(R.string.content_type_geo),
+        CONTACT(R.string.content_type_contact);
 
         companion object {
             fun fromLocalizedLabel(value: String, resolver: (Int) -> String): ContentType {
@@ -86,6 +92,11 @@ class MainActivity : ComponentActivity() {
     private sealed class ScanResult {
         data class Text(val value: String) : ScanResult()
         data class Url(val value: String) : ScanResult()
+        data class Phone(val value: String) : ScanResult()
+        data class Email(val value: String, val subject: String?, val body: String?) : ScanResult()
+        data class Sms(val phoneNumber: String, val message: String?) : ScanResult()
+        data class Geo(val latitude: String, val longitude: String) : ScanResult()
+        data class Contact(val name: String, val phone: String?, val email: String?) : ScanResult()
         data class Wifi(
             val ssid: String,
             val security: String,
@@ -192,6 +203,17 @@ class MainActivity : ComponentActivity() {
     private lateinit var editText: EditText
     private lateinit var editTextWifiSsid: EditText
     private lateinit var editTextWifiPassword: EditText
+    private lateinit var editTextPhoneNumber: EditText
+    private lateinit var editTextEmailAddress: EditText
+    private lateinit var editTextEmailSubject: EditText
+    private lateinit var editTextEmailBody: EditText
+    private lateinit var editTextSmsNumber: EditText
+    private lateinit var editTextSmsMessage: EditText
+    private lateinit var editTextGeoLatitude: EditText
+    private lateinit var editTextGeoLongitude: EditText
+    private lateinit var editTextContactName: EditText
+    private lateinit var editTextContactPhone: EditText
+    private lateinit var editTextContactEmail: EditText
     private lateinit var editTextSize: EditText
     private lateinit var editTextSaveText: EditText
     private lateinit var buttonPickContentType: Button
@@ -225,6 +247,11 @@ class MainActivity : ComponentActivity() {
     private lateinit var historyListContainer: LinearLayout
     private lateinit var textInputContainer: View
     private lateinit var wifiFieldsContainer: View
+    private lateinit var phoneFieldsContainer: View
+    private lateinit var emailFieldsContainer: View
+    private lateinit var smsFieldsContainer: View
+    private lateinit var geoFieldsContainer: View
+    private lateinit var contactFieldsContainer: View
     private var generatedBitmap: Bitmap? = null
     private var pendingSaveBitmap: Bitmap? = null
     private var currentScreenMode: ScreenMode = ScreenMode.CREATE
@@ -323,6 +350,17 @@ class MainActivity : ComponentActivity() {
         editText = findViewById(R.id.editTextText)
         editTextWifiSsid = findViewById(R.id.editTextWifiSsid)
         editTextWifiPassword = findViewById(R.id.editTextWifiPassword)
+        editTextPhoneNumber = findViewById(R.id.editTextPhoneNumber)
+        editTextEmailAddress = findViewById(R.id.editTextEmailAddress)
+        editTextEmailSubject = findViewById(R.id.editTextEmailSubject)
+        editTextEmailBody = findViewById(R.id.editTextEmailBody)
+        editTextSmsNumber = findViewById(R.id.editTextSmsNumber)
+        editTextSmsMessage = findViewById(R.id.editTextSmsMessage)
+        editTextGeoLatitude = findViewById(R.id.editTextGeoLatitude)
+        editTextGeoLongitude = findViewById(R.id.editTextGeoLongitude)
+        editTextContactName = findViewById(R.id.editTextContactName)
+        editTextContactPhone = findViewById(R.id.editTextContactPhone)
+        editTextContactEmail = findViewById(R.id.editTextContactEmail)
         editTextSize = findViewById(R.id.editTextSize)
         editTextSaveText = findViewById(R.id.editTextSaveText)
         buttonPickContentType = findViewById(R.id.buttonPickContentType)
@@ -356,6 +394,11 @@ class MainActivity : ComponentActivity() {
         historyListContainer = findViewById(R.id.historyListContainer)
         textInputContainer = findViewById(R.id.textInputContainer)
         wifiFieldsContainer = findViewById(R.id.wifiFieldsContainer)
+        phoneFieldsContainer = findViewById(R.id.phoneFieldsContainer)
+        emailFieldsContainer = findViewById(R.id.emailFieldsContainer)
+        smsFieldsContainer = findViewById(R.id.smsFieldsContainer)
+        geoFieldsContainer = findViewById(R.id.geoFieldsContainer)
+        contactFieldsContainer = findViewById(R.id.contactFieldsContainer)
 
         updateSelectedContentType(
             ContentType.fromLocalizedLabel(getString(R.string.default_content_type), ::getString)
@@ -892,6 +935,41 @@ class MainActivity : ComponentActivity() {
                 ),
                 rawValue = rawValue
             )
+
+            is ScanResult.Phone -> scanHistoryStore.add(
+                type = getString(R.string.content_type_phone),
+                title = result.value,
+                summary = result.value,
+                rawValue = rawValue
+            )
+
+            is ScanResult.Email -> scanHistoryStore.add(
+                type = getString(R.string.content_type_email),
+                title = result.value,
+                summary = listOfNotNull(result.subject, result.body).joinToString(" • ").ifBlank { result.value },
+                rawValue = rawValue
+            )
+
+            is ScanResult.Sms -> scanHistoryStore.add(
+                type = getString(R.string.content_type_sms),
+                title = result.phoneNumber,
+                summary = result.message.orEmpty(),
+                rawValue = rawValue
+            )
+
+            is ScanResult.Geo -> scanHistoryStore.add(
+                type = getString(R.string.content_type_geo),
+                title = "${result.latitude}, ${result.longitude}",
+                summary = rawValue,
+                rawValue = rawValue
+            )
+
+            is ScanResult.Contact -> scanHistoryStore.add(
+                type = getString(R.string.content_type_contact),
+                title = result.name,
+                summary = listOfNotNull(result.phone, result.email).joinToString(" • "),
+                rawValue = rawValue
+            )
         }
     }
 
@@ -1041,6 +1119,130 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            is ScanResult.Phone -> {
+                textViewScanResultType.text = getString(R.string.content_type_phone)
+                textViewScanResultValue.text = result.value
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_call)
+                lastScanAction = {
+                    startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(result.value)}")))
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.content_type_phone), result.value)
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Email -> {
+                textViewScanResultType.text = getString(R.string.content_type_email)
+                textViewScanResultValue.text =
+                    listOf(result.value, result.subject.orEmpty(), result.body.orEmpty())
+                        .filter { it.isNotBlank() }
+                        .joinToString("\n")
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_send_email)
+                lastScanAction = {
+                    startActivity(
+                        Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:${Uri.encode(result.value)}")).apply {
+                            if (!result.subject.isNullOrBlank()) {
+                                putExtra(Intent.EXTRA_SUBJECT, result.subject)
+                            }
+                            if (!result.body.isNullOrBlank()) {
+                                putExtra(Intent.EXTRA_TEXT, result.body)
+                            }
+                        }
+                    )
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.content_type_email), textViewScanResultValue.text.toString())
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Sms -> {
+                textViewScanResultType.text = getString(R.string.content_type_sms)
+                textViewScanResultValue.text =
+                    listOf(result.phoneNumber, result.message.orEmpty()).filter { it.isNotBlank() }
+                        .joinToString("\n")
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_send_message)
+                lastScanAction = {
+                    val smsUri = Uri.parse("smsto:${Uri.encode(result.phoneNumber)}")
+                    startActivity(
+                        Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                            if (!result.message.isNullOrBlank()) {
+                                putExtra("sms_body", result.message)
+                            }
+                        }
+                    )
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.content_type_sms), textViewScanResultValue.text.toString())
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Geo -> {
+                textViewScanResultType.text = getString(R.string.content_type_geo)
+                textViewScanResultValue.text = "${result.latitude}, ${result.longitude}"
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_open_map)
+                lastScanAction = {
+                    startActivity(
+                        Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse("geo:${result.latitude},${result.longitude}")
+                        )
+                    )
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.content_type_geo), textViewScanResultValue.text.toString())
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
+            is ScanResult.Contact -> {
+                textViewScanResultType.text = getString(R.string.content_type_contact)
+                textViewScanResultValue.text =
+                    listOfNotNull(result.name, result.phone, result.email).joinToString("\n")
+                buttonScanPrimaryAction.text = getString(R.string.scan_action_add_contact)
+                lastScanAction = {
+                    startActivity(
+                        Intent(ContactsContract.Intents.Insert.ACTION).apply {
+                            type = ContactsContract.RawContacts.CONTENT_TYPE
+                            putExtra(ContactsContract.Intents.Insert.NAME, result.name)
+                            putExtra(ContactsContract.Intents.Insert.PHONE, result.phone)
+                            putExtra(ContactsContract.Intents.Insert.EMAIL, result.email)
+                        }
+                    )
+                }
+                buttonScanSecondaryAction.visibility = View.VISIBLE
+                buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
+                lastSecondaryScanAction = {
+                    copyToClipboard(getString(R.string.content_type_contact), textViewScanResultValue.text.toString())
+                }
+                buttonScanUseInCreate.visibility = View.VISIBLE
+                useInCreateAction = {
+                    applyScannedResultToCreate(result)
+                }
+            }
+
             is ScanResult.Wifi -> {
                 textViewScanResultType.text = getString(R.string.scan_result_type_wifi)
                 textViewScanResultValue.text = getString(
@@ -1107,6 +1309,37 @@ class MainActivity : ComponentActivity() {
                 editText.setText(result.value)
             }
 
+            is ScanResult.Phone -> {
+                updateSelectedContentType(ContentType.PHONE)
+                editTextPhoneNumber.setText(result.value)
+            }
+
+            is ScanResult.Email -> {
+                updateSelectedContentType(ContentType.EMAIL)
+                editTextEmailAddress.setText(result.value)
+                editTextEmailSubject.setText(result.subject.orEmpty())
+                editTextEmailBody.setText(result.body.orEmpty())
+            }
+
+            is ScanResult.Sms -> {
+                updateSelectedContentType(ContentType.SMS)
+                editTextSmsNumber.setText(result.phoneNumber)
+                editTextSmsMessage.setText(result.message.orEmpty())
+            }
+
+            is ScanResult.Geo -> {
+                updateSelectedContentType(ContentType.GEO)
+                editTextGeoLatitude.setText(result.latitude)
+                editTextGeoLongitude.setText(result.longitude)
+            }
+
+            is ScanResult.Contact -> {
+                updateSelectedContentType(ContentType.CONTACT)
+                editTextContactName.setText(result.name)
+                editTextContactPhone.setText(result.phone.orEmpty())
+                editTextContactEmail.setText(result.email.orEmpty())
+            }
+
             is ScanResult.Wifi -> {
                 updateSelectedContentType(ContentType.WIFI)
                 editTextWifiSsid.setText(result.ssid)
@@ -1126,11 +1359,116 @@ class MainActivity : ComponentActivity() {
 
     private fun parseScanResult(rawValue: String): ScanResult {
         parseWifiQr(rawValue)?.let { return it }
+        parsePhoneQr(rawValue)?.let { return it }
+        parseEmailQr(rawValue)?.let { return it }
+        parseSmsQr(rawValue)?.let { return it }
+        parseGeoQr(rawValue)?.let { return it }
+        parseContactQr(rawValue)?.let { return it }
         return if (rawValue.startsWith("http://") || rawValue.startsWith("https://")) {
             ScanResult.Url(rawValue)
         } else {
             ScanResult.Text(rawValue)
         }
+    }
+
+    private fun parsePhoneQr(rawValue: String): ScanResult.Phone? {
+        return if (rawValue.startsWith("tel:", ignoreCase = true)) {
+            ScanResult.Phone(rawValue.removePrefix("tel:").removePrefix("TEL:"))
+        } else {
+            null
+        }
+    }
+
+    private fun parseEmailQr(rawValue: String): ScanResult.Email? {
+        return if (rawValue.startsWith("mailto:", ignoreCase = true)) {
+            val mailToUri = Uri.parse(rawValue)
+            val address = mailToUri.schemeSpecificPart.substringBefore('?')
+            if (address.isBlank()) {
+                null
+            } else {
+                ScanResult.Email(
+                    value = Uri.decode(address),
+                    subject = mailToUri.getQueryParameter("subject"),
+                    body = mailToUri.getQueryParameter("body")
+                )
+            }
+        } else if (rawValue.startsWith("MATMSG:", ignoreCase = true)) {
+            val body = rawValue.substringAfter(':')
+            val values = body.split(';')
+                .mapNotNull { token ->
+                    val separator = token.indexOf(':')
+                    if (separator <= 0) null else token.substring(0, separator) to token.substring(separator + 1)
+                }
+                .toMap()
+            val address = values["TO"] ?: return null
+            ScanResult.Email(
+                value = address,
+                subject = values["SUB"],
+                body = values["BODY"]
+            )
+        } else {
+            null
+        }
+    }
+
+    private fun parseSmsQr(rawValue: String): ScanResult.Sms? {
+        if (!rawValue.startsWith("SMSTO:", ignoreCase = true)) {
+            return null
+        }
+        val body = rawValue.substringAfter(':')
+        val parts = body.split(':', limit = 2)
+        val number = parts.getOrNull(0).orEmpty()
+        if (number.isBlank()) {
+            return null
+        }
+        return ScanResult.Sms(number, parts.getOrNull(1))
+    }
+
+    private fun parseGeoQr(rawValue: String): ScanResult.Geo? {
+        if (!rawValue.startsWith("geo:", ignoreCase = true)) {
+            return null
+        }
+        val coordinates = rawValue.substringAfter(':').substringBefore('?')
+        val parts = coordinates.split(',', limit = 2)
+        val latitude = parts.getOrNull(0).orEmpty()
+        val longitude = parts.getOrNull(1).orEmpty()
+        return if (latitude.isBlank() || longitude.isBlank()) {
+            null
+        } else {
+            ScanResult.Geo(latitude, longitude)
+        }
+    }
+
+    private fun parseContactQr(rawValue: String): ScanResult.Contact? {
+        if (rawValue.startsWith("MECARD:", ignoreCase = true)) {
+            val body = rawValue.substringAfter(':')
+            val values = body.split(';')
+                .mapNotNull { token ->
+                    val separator = token.indexOf(':')
+                    if (separator <= 0) null else token.substring(0, separator) to token.substring(separator + 1)
+                }
+                .toMap()
+            val name = values["N"] ?: return null
+            return ScanResult.Contact(
+                name = name.replace("\\;", ";"),
+                phone = values["TEL"]?.replace("\\;", ";"),
+                email = values["EMAIL"]?.replace("\\;", ";")
+            )
+        }
+
+        if (rawValue.contains("BEGIN:VCARD", ignoreCase = true)) {
+            val lines = rawValue.lines()
+            val name = lines.firstOrNull { it.startsWith("FN:", ignoreCase = true) }
+                ?.substringAfter(':')
+                ?: return null
+            val phone = lines.firstOrNull { it.startsWith("TEL", ignoreCase = true) }
+                ?.substringAfter(':')
+            val email = lines.firstOrNull { it.startsWith("EMAIL", ignoreCase = true) }
+                ?.substringAfter(':')
+            return ScanResult.Contact(name = name, phone = phone, email = email)
+        }
+
+        return null
     }
 
     private fun parseWifiQr(rawValue: String): ScanResult.Wifi? {
@@ -1408,9 +1746,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun syncContentTypeUi() {
-        val isWifi = selectedContentType() == ContentType.WIFI
-        textInputContainer.visibility = if (isWifi) View.GONE else View.VISIBLE
-        wifiFieldsContainer.visibility = if (isWifi) View.VISIBLE else View.GONE
+        val contentType = selectedContentType()
+        textInputContainer.visibility = if (contentType == ContentType.TEXT) View.VISIBLE else View.GONE
+        wifiFieldsContainer.visibility = if (contentType == ContentType.WIFI) View.VISIBLE else View.GONE
+        phoneFieldsContainer.visibility = if (contentType == ContentType.PHONE) View.VISIBLE else View.GONE
+        emailFieldsContainer.visibility = if (contentType == ContentType.EMAIL) View.VISIBLE else View.GONE
+        smsFieldsContainer.visibility = if (contentType == ContentType.SMS) View.VISIBLE else View.GONE
+        geoFieldsContainer.visibility = if (contentType == ContentType.GEO) View.VISIBLE else View.GONE
+        contactFieldsContainer.visibility = if (contentType == ContentType.CONTACT) View.VISIBLE else View.GONE
     }
 
     private fun updateSelectedDesignStyle(designStyle: DesignStyle) {
@@ -1540,6 +1883,72 @@ class MainActivity : ComponentActivity() {
                 }
                 buildWifiQrPayload(ssid, password, security, currentWifiHidden)
             }
+
+            ContentType.PHONE -> {
+                val phoneNumber = editTextPhoneNumber.text.toString().trim()
+                if (phoneNumber.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_phone_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                "tel:$phoneNumber"
+            }
+
+            ContentType.EMAIL -> {
+                val emailAddress = editTextEmailAddress.text.toString().trim()
+                if (emailAddress.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_email_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                val subject = editTextEmailSubject.text.toString().trim()
+                val body = editTextEmailBody.text.toString().trim()
+                buildMailToPayload(emailAddress, subject, body)
+            }
+
+            ContentType.SMS -> {
+                val smsNumber = editTextSmsNumber.text.toString().trim()
+                if (smsNumber.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_sms_number_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                val message = editTextSmsMessage.text.toString().trim()
+                buildSmsPayload(smsNumber, message)
+            }
+
+            ContentType.GEO -> {
+                val latitude = editTextGeoLatitude.text.toString().trim()
+                val longitude = editTextGeoLongitude.text.toString().trim()
+                if (latitude.isBlank() || longitude.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_geo_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                "geo:$latitude,$longitude"
+            }
+
+            ContentType.CONTACT -> {
+                val name = editTextContactName.text.toString().trim()
+                val phone = editTextContactPhone.text.toString().trim()
+                val email = editTextContactEmail.text.toString().trim()
+                if (name.isBlank()) {
+                    if (showValidationError) {
+                        Toast.makeText(this, getString(R.string.enter_contact_name_error), Toast.LENGTH_LONG)
+                            .show()
+                    }
+                    return null
+                }
+                buildMeCardPayload(name, phone, email)
+            }
         }
     }
 
@@ -1576,6 +1985,46 @@ class MainActivity : ComponentActivity() {
             .replace(",", "\\,")
             .replace(":", "\\:")
             .replace("\"", "\\\"")
+    }
+
+    private fun buildMailToPayload(address: String, subject: String, body: String): String {
+        val queryParts = mutableListOf<String>()
+        if (subject.isNotBlank()) {
+            queryParts += "subject=${Uri.encode(subject)}"
+        }
+        if (body.isNotBlank()) {
+            queryParts += "body=${Uri.encode(body)}"
+        }
+        val query = if (queryParts.isEmpty()) "" else "?${queryParts.joinToString("&")}"
+        return "mailto:${Uri.encode(address)}$query"
+    }
+
+    private fun buildSmsPayload(number: String, message: String): String {
+        return if (message.isBlank()) {
+            "SMSTO:$number"
+        } else {
+            "SMSTO:$number:${message.replace(":", "\\:")}"
+        }
+    }
+
+    private fun buildMeCardPayload(name: String, phone: String, email: String): String {
+        return buildString {
+            append("MECARD:")
+            append("N:")
+            append(name.replace(";", "\\;"))
+            append(';')
+            if (phone.isNotBlank()) {
+                append("TEL:")
+                append(phone.replace(";", "\\;"))
+                append(';')
+            }
+            if (email.isNotBlank()) {
+                append("EMAIL:")
+                append(email.replace(";", "\\;"))
+                append(';')
+            }
+            append(';')
+        }
     }
 
     private fun parseQrColor(colorValue: String): Int {
@@ -1626,6 +2075,12 @@ class MainActivity : ComponentActivity() {
         return when (selectedContentType()) {
             ContentType.TEXT -> editText.text.toString().trim().isNotEmpty()
             ContentType.WIFI -> editTextWifiSsid.text.toString().trim().isNotEmpty()
+            ContentType.PHONE -> editTextPhoneNumber.text.toString().trim().isNotEmpty()
+            ContentType.EMAIL -> editTextEmailAddress.text.toString().trim().isNotEmpty()
+            ContentType.SMS -> editTextSmsNumber.text.toString().trim().isNotEmpty()
+            ContentType.GEO -> editTextGeoLatitude.text.toString().trim().isNotEmpty() &&
+                editTextGeoLongitude.text.toString().trim().isNotEmpty()
+            ContentType.CONTACT -> editTextContactName.text.toString().trim().isNotEmpty()
         }
     }
 

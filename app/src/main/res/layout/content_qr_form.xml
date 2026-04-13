@@ -222,8 +222,290 @@
                     android:paddingHorizontal="18dp"
                     android:text="@string/wifi_hidden_label"
                     android:textAllCaps="false"
-                    android:textColor="@color/button_secondary_text" />
+                android:textColor="@color/button_secondary_text" />
             </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/phoneFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextPhoneNumber"
+                android:text="@string/phone_number_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextPhoneNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/phone_number_hint"
+                android:inputType="phone"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/emailFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextEmailAddress"
+                android:text="@string/email_address_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextEmailAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/email_address_hint"
+                android:inputType="textEmailAddress"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextEmailSubject"
+                android:text="@string/email_subject_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextEmailSubject"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/email_subject_hint"
+                android:inputType="text"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextEmailBody"
+                android:text="@string/email_body_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextEmailBody"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/email_body_hint"
+                android:inputType="textMultiLine"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/smsFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextSmsNumber"
+                android:text="@string/sms_number_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextSmsNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/sms_number_hint"
+                android:inputType="phone"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextSmsMessage"
+                android:text="@string/sms_message_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextSmsMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/sms_message_hint"
+                android:inputType="textMultiLine"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/geoFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextGeoLatitude"
+                android:text="@string/geo_latitude_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextGeoLatitude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/geo_latitude_hint"
+                android:inputType="numberDecimal|numberSigned"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextGeoLongitude"
+                android:text="@string/geo_longitude_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextGeoLongitude"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/geo_longitude_hint"
+                android:inputType="numberDecimal|numberSigned"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/contactFieldsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextContactName"
+                android:text="@string/contact_name_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextContactName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/contact_name_hint"
+                android:inputType="textPersonName"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextContactPhone"
+                android:text="@string/contact_phone_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextContactPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/contact_phone_hint"
+                android:inputType="phone"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:labelFor="@id/editTextContactEmail"
+                android:text="@string/contact_email_label"
+                android:textColor="@color/text_primary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <EditText
+                android:id="@+id/editTextContactEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_input_surface"
+                android:hint="@string/contact_email_hint"
+                android:inputType="textEmailAddress"
+                android:minHeight="56dp"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp" />
         </LinearLayout>
 
         <TextView
