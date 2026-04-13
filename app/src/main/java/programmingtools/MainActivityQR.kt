@@ -17,6 +17,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.Settings
+import android.util.Size
 import android.view.View
 import android.view.HapticFeedbackConstants
 import android.widget.Button
@@ -34,6 +35,8 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
@@ -178,6 +181,7 @@ class MainActivity : ComponentActivity() {
         private const val STATE_BACKGROUND_COLOR = "state_background_color"
         private const val STATE_HAS_QR = "state_has_qr"
         private const val SCAN_RESULT_COOLDOWN_MS = 2_000L
+        private const val SCAN_INACTIVITY_TIMEOUT_MS = 30_000L
     }
 
     private lateinit var imageViewQRCode: ImageView
@@ -277,6 +281,13 @@ class MainActivity : ComponentActivity() {
     private var selectedColor: Int = Color.BLACK
     private var selectedBackgroundColor: Int = Color.WHITE
     private val qrCodeGenerator = QRCodeGenerator()
+    private val scannerInactivityRunnable = Runnable {
+        if (currentScreenMode == ScreenMode.SCAN) {
+            scannerPaused = true
+            updateScanResult(null)
+            stopScanner(getString(R.string.scan_status_auto_paused))
+        }
+    }
 
     private val createDocument =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
@@ -460,7 +471,7 @@ class MainActivity : ComponentActivity() {
         }
 
         buttonResetScan.setOnClickListener {
-            resetScanResult()
+            resumeScanning()
         }
 
         buttonClearHistory.setOnClickListener {
@@ -671,9 +682,24 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        cancelScannerInactivityTimeout()
         cameraProvider?.unbindAll()
         cameraExecutor.shutdown()
         super.onDestroy()
+    }
+
+    override fun onPause() {
+        if (currentScreenMode == ScreenMode.SCAN) {
+            stopScanner(getString(R.string.scan_status_paused_background))
+        }
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (currentScreenMode == ScreenMode.SCAN && hasCameraPermission()) {
+            startScanner()
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1005,10 +1031,19 @@ class MainActivity : ComponentActivity() {
         textViewScanStatus.text = status
     }
 
+    private fun resumeScanning() {
+        if (currentScreenMode != ScreenMode.SCAN || !hasCameraPermission()) {
+            resetScanResult()
+            return
+        }
+        startScanner()
+    }
+
     private fun startScanner() {
         if (!hasCameraPermission()) {
             return
         }
+        cancelScannerInactivityTimeout()
         resetScanResult()
         updateScanStatus(getString(R.string.scan_status_searching))
         val cameraProviderFuture: ListenableFuture<ProcessCameraProvider> =
@@ -1022,9 +1057,10 @@ class MainActivity : ComponentActivity() {
         )
     }
 
-    private fun stopScanner() {
+    private fun stopScanner(status: String = getString(R.string.scan_status_idle)) {
+        cancelScannerInactivityTimeout()
         cameraProvider?.unbindAll()
-        updateScanStatus(getString(R.string.scan_status_idle))
+        updateScanStatus(status)
     }
 
     private fun bindCameraUseCases() {
@@ -1033,6 +1069,16 @@ class MainActivity : ComponentActivity() {
             it.setSurfaceProvider(previewViewScanner.surfaceProvider)
         }
         val analyzer = ImageAnalysis.Builder()
+            .setResolutionSelector(
+                ResolutionSelector.Builder()
+                    .setResolutionStrategy(
+                        ResolutionStrategy(
+                            Size(1280, 720),
+                            ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER
+                        )
+                    )
+                    .build()
+            )
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->
@@ -1041,10 +1087,20 @@ class MainActivity : ComponentActivity() {
         try {
             provider.unbindAll()
             provider.bindToLifecycle(this, CameraSelector.DEFAULT_BACK_CAMERA, preview, analyzer)
+            scheduleScannerInactivityTimeout()
         } catch (e: Exception) {
             AppTelemetry.recordNonFatal("scanner_bind_failed", e)
             updateScanStatus(getString(R.string.scan_status_idle))
         }
+    }
+
+    private fun scheduleScannerInactivityTimeout() {
+        cancelScannerInactivityTimeout()
+        previewViewScanner.postDelayed(scannerInactivityRunnable, SCAN_INACTIVITY_TIMEOUT_MS)
+    }
+
+    private fun cancelScannerInactivityTimeout() {
+        previewViewScanner.removeCallbacks(scannerInactivityRunnable)
     }
 
     private fun handleScannedBarcode(rawValue: String) {

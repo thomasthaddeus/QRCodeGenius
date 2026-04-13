@@ -15,6 +15,8 @@
     <string name="scan_status_searching">Buscando un código QR…</string>
     <string name="scan_status_detected">Código QR detectado.</string>
     <string name="scan_status_permission_denied">Se denegó el permiso de cámara.</string>
+    <string name="scan_status_auto_paused">El escáner se pausó para ahorrar batería. Toca Escanear de nuevo para continuar.</string>
+    <string name="scan_status_paused_background">El escáner se pausó mientras la app está en segundo plano.</string>
     <string name="scan_result_label">Resultado del escaneo</string>
     <string name="scan_result_type_text">Texto</string>
     <string name="scan_result_type_url">Enlace</string>
