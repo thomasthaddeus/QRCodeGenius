@@ -18,6 +18,7 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.view.View
+import android.view.HapticFeedbackConstants
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -37,6 +38,8 @@ import androidx.camera.view.PreviewView
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.annotation.StringRes
+import android.net.wifi.WifiManager
+import android.net.wifi.WifiNetworkSuggestion
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
@@ -231,12 +234,14 @@ class MainActivity : ComponentActivity() {
     private var currentLogoUri: Uri? = null
     private var lastScannedRawValue: String? = null
     private var lastScanTimestampMs: Long = 0L
+    private var scannerPaused: Boolean = false
     private var lastScanAction: (() -> Unit)? = null
     private var lastSecondaryScanAction: (() -> Unit)? = null
     private var useInCreateAction: (() -> Unit)? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var scanHistoryStore: ScanHistoryStore
+    private var activeWifiSuggestion: WifiNetworkSuggestion? = null
     private var currentEyeStyle: EyeStyle = EyeStyle.CLASSIC
     private var currentCenterBadge: CenterBadge = CenterBadge.NONE
     private var currentDesignStyle: DesignStyle = DesignStyle.MINIMAL
@@ -965,15 +970,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleScannedBarcode(rawValue: String) {
+        if (scannerPaused) {
+            return
+        }
         val now = System.currentTimeMillis()
         if (rawValue == lastScannedRawValue && now - lastScanTimestampMs < SCAN_RESULT_COOLDOWN_MS) {
             return
         }
         lastScannedRawValue = rawValue
         lastScanTimestampMs = now
+        scannerPaused = true
         val parsedResult = parseScanResult(rawValue)
         addScanToHistory(parsedResult, rawValue)
         runOnUiThread {
+            previewViewScanner.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
             updateScanStatus(getString(R.string.scan_status_detected))
             updateScanResult(parsedResult)
             AppTelemetry.logEvent("qr_scanned")
@@ -1077,6 +1087,7 @@ class MainActivity : ComponentActivity() {
     private fun resetScanResult() {
         lastScannedRawValue = null
         lastScanTimestampMs = 0L
+        scannerPaused = false
         updateScanResult(null)
         updateScanStatus(
             if (hasCameraPermission()) getString(R.string.scan_status_searching)
@@ -1186,8 +1197,11 @@ class MainActivity : ComponentActivity() {
                     if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no)
                 )
             )
-            .setPositiveButton(R.string.scan_action_open_wifi_settings) { _, _ ->
-                startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
+            .setPositiveButton(R.string.scan_action_connect_wifi) { _, _ ->
+                val suggested = suggestWifiNetwork(result)
+                if (!suggested) {
+                    startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
+                }
             }
             .setNeutralButton(
                 if (result.password.isNullOrBlank()) R.string.scan_action_copy
@@ -1206,8 +1220,53 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null)
+            .setNegativeButton(R.string.scan_action_open_wifi_settings) { _, _ ->
+                startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
+            }
             .show()
+    }
+
+    private fun suggestWifiNetwork(result: ScanResult.Wifi): Boolean {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+            ?: return false
+
+        activeWifiSuggestion?.let { previousSuggestion ->
+            wifiManager.removeNetworkSuggestions(listOf(previousSuggestion))
+            activeWifiSuggestion = null
+        }
+
+        val builder = WifiNetworkSuggestion.Builder()
+            .setSsid(result.ssid)
+            .setIsHiddenSsid(result.hidden)
+
+        when (result.security.uppercase()) {
+            "WPA", "WPA/WPA2" -> {
+                val password = result.password ?: return false
+                builder.setWpa2Passphrase(password)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    builder.setCredentialSharedWithUser(true)
+                }
+            }
+
+            "OPEN", "NOPASS" -> Unit
+            else -> return false
+        }
+
+        val suggestion = builder.build()
+        val status = wifiManager.addNetworkSuggestions(listOf(suggestion))
+        return if (status == WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
+            activeWifiSuggestion = suggestion
+            Toast.makeText(this, getString(R.string.scan_wifi_suggestion_added), Toast.LENGTH_LONG)
+                .show()
+            true
+        } else {
+            Toast.makeText(
+                this,
+                getString(R.string.scan_wifi_suggestion_failed),
+                Toast.LENGTH_LONG
+            ).show()
+            false
+        }
     }
 
     private fun selectedSaveFormat(): SaveFormat {
