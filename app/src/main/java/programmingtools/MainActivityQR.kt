@@ -18,12 +18,14 @@ import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.Settings
 import android.util.Size
+import android.view.LayoutInflater
 import android.view.View
 import android.view.HapticFeedbackConstants
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.RatingBar
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
@@ -210,6 +212,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var buttonGrantCameraPermission: Button
     private lateinit var buttonResetScan: Button
     private lateinit var buttonClearHistory: Button
+    private lateinit var buttonOpenFeedback: Button
     private lateinit var textViewScanPermissionState: TextView
     private lateinit var textViewScanStatus: TextView
     private lateinit var scanResultContainer: View
@@ -364,6 +367,7 @@ class MainActivity : ComponentActivity() {
         buttonGrantCameraPermission = findViewById(R.id.buttonGrantCameraPermission)
         buttonResetScan = findViewById(R.id.buttonResetScan)
         buttonClearHistory = findViewById(R.id.buttonClearHistory)
+        buttonOpenFeedback = findViewById(R.id.buttonOpenFeedback)
         textViewScanPermissionState = findViewById(R.id.textViewScanPermissionState)
         textViewScanStatus = findViewById(R.id.textViewScanStatus)
         scanResultContainer = findViewById(R.id.scanResultContainer)
@@ -493,6 +497,10 @@ class MainActivity : ComponentActivity() {
 
         buttonClearHistory.setOnClickListener {
             confirmClearHistory()
+        }
+
+        buttonOpenFeedback.setOnClickListener {
+            showFeedbackDialog()
         }
 
         buttonGenerate.setOnClickListener {
@@ -950,6 +958,30 @@ class MainActivity : ComponentActivity() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun showFeedbackDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_feedback, null)
+        val ratingBar = dialogView.findViewById<RatingBar>(R.id.ratingBarFeedback)
+        val editTextFeedbackNotes =
+            dialogView.findViewById<EditText>(R.id.editTextFeedbackNotes)
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.feedback_dialog_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.feedback_send_button) { _, _ ->
+                sendFeedbackEmail(
+                    rating = ratingBar.rating.toInt().coerceAtLeast(1),
+                    notes = editTextFeedbackNotes.text.toString().trim()
+                )
+            }
+            .setNeutralButton(R.string.feedback_rate_store_button) { _, _ ->
+                openPlayStoreListing()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+
+        AppTelemetry.logEvent("feedback_dialog_opened")
     }
 
     private fun addScanToHistory(result: ScanResult, rawValue: String) {
@@ -1774,6 +1806,67 @@ class MainActivity : ComponentActivity() {
         val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboardManager.setPrimaryClip(ClipData.newPlainText(label, value))
         Toast.makeText(this, getString(messageResId), Toast.LENGTH_LONG).show()
+    }
+
+    private fun sendFeedbackEmail(rating: Int, notes: String) {
+        val body = buildString {
+            appendLine(getString(R.string.feedback_email_rating_format, rating))
+            appendLine()
+            appendLine(getString(R.string.feedback_email_comments_label))
+            appendLine(if (notes.isBlank()) getString(R.string.feedback_no_comments) else notes)
+            appendLine()
+            appendLine(
+                getString(
+                    R.string.feedback_email_app_version_format,
+                    packageManager.getPackageInfo(packageName, 0).versionName ?: ""
+                )
+            )
+        }.trim()
+
+        val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:${getString(R.string.feedback_email_address)}")
+            putExtra(
+                Intent.EXTRA_SUBJECT,
+                getString(R.string.feedback_email_subject_format, rating)
+            )
+            putExtra(Intent.EXTRA_TEXT, body)
+        }
+
+        try {
+            startActivity(emailIntent)
+            AppTelemetry.logEvent("feedback_email_started", mapOf("rating" to rating.toString()))
+        } catch (_: Exception) {
+            Toast.makeText(this, getString(R.string.feedback_email_error), Toast.LENGTH_LONG).show()
+            AppTelemetry.logEvent("feedback_email_failed")
+        }
+    }
+
+    private fun openPlayStoreListing() {
+        val packageId = packageName
+        val playStoreIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("market://details?id=$packageId")
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val webIntent = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse("https://play.google.com/store/apps/details?id=$packageId")
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        try {
+            startActivity(playStoreIntent)
+        } catch (_: Exception) {
+            try {
+                startActivity(webIntent)
+            } catch (_: Exception) {
+                Toast.makeText(this, getString(R.string.feedback_store_error), Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+        AppTelemetry.logEvent("feedback_rate_store_opened")
     }
 
     private fun showWifiConnectDialog(

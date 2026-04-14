@@ -31,6 +31,16 @@
         android:textAllCaps="false"
         android:textColor="@color/button_secondary_text" />
 
+    <Button
+        android:id="@+id/buttonOpenFeedback"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_primary_bg"
+        android:text="@string/feedback_open_center"
+        android:textAllCaps="false"
+        android:textColor="@color/button_primary_text" />
+
     <TextView
         android:id="@+id/textViewHistoryEmpty"
         android:layout_width="match_parent"
