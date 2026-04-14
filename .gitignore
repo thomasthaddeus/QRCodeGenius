@@ -63,3 +63,4 @@ replay_pid*
 # Misc
 *.ctxt
 .mtj.tmp/
+docs/

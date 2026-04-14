@@ -113,4 +113,13 @@
             <include layout="@layout/content_history_panel" />
         </LinearLayout>
     </ScrollView>
+
+    <TextView
+        android:id="@+id/textViewAccessibilityAnnouncements"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:accessibilityLiveRegion="polite"
+        android:alpha="0"
+        android:importantForAccessibility="yes"
+        android:textColor="@android:color/transparent" />
 </LinearLayout>

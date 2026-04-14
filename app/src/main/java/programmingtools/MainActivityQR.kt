@@ -108,6 +108,21 @@ class MainActivity : ComponentActivity() {
         ) : ScanResult()
     }
 
+    private data class UrlSafetyAssessment(
+        val isSuspicious: Boolean,
+        val reasons: List<String>
+    )
+
+    private data class NumberSafetyAssessment(
+        val isSuspicious: Boolean,
+        val reasons: List<String>
+    )
+
+    private data class WifiSafetyAssessment(
+        val isSuspicious: Boolean,
+        val reasons: List<String>
+    )
+
     enum class EyeStyle(@param:StringRes val labelResId: Int) {
         CLASSIC(R.string.eye_style_classic),
         ROUNDED(R.string.eye_style_rounded),
@@ -248,6 +263,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var textViewSelectedColor: TextView
     private lateinit var textViewSelectedBackgroundColor: TextView
     private lateinit var textViewPreviewStatus: TextView
+    private lateinit var textViewAccessibilityAnnouncements: TextView
     private lateinit var historyListContainer: LinearLayout
     private lateinit var textInputContainer: View
     private lateinit var wifiFieldsContainer: View
@@ -402,6 +418,7 @@ class MainActivity : ComponentActivity() {
         textViewSelectedColor = findViewById(R.id.textViewSelectedColor)
         textViewSelectedBackgroundColor = findViewById(R.id.textViewSelectedBackgroundColor)
         textViewPreviewStatus = findViewById(R.id.textViewPreviewStatus)
+        textViewAccessibilityAnnouncements = findViewById(R.id.textViewAccessibilityAnnouncements)
         historyListContainer = findViewById(R.id.historyListContainer)
         textInputContainer = findViewById(R.id.textInputContainer)
         wifiFieldsContainer = findViewById(R.id.wifiFieldsContainer)
@@ -1153,15 +1170,35 @@ class MainActivity : ComponentActivity() {
             }
 
             is ScanResult.Url -> {
+                val safetyAssessment = assessUrlSafety(result.value)
                 textViewScanResultType.text = getString(R.string.scan_result_type_url)
-                textViewScanResultValue.text = result.value
-                buttonScanPrimaryAction.text = getString(R.string.scan_action_open_link)
+                textViewScanResultValue.text = if (safetyAssessment.isSuspicious) {
+                    getString(
+                        R.string.scan_url_warning_format,
+                        result.value,
+                        safetyAssessment.reasons.joinToString(", ")
+                    )
+                } else {
+                    result.value
+                }
+                buttonScanPrimaryAction.text = getString(
+                    if (safetyAssessment.isSuspicious) {
+                        R.string.scan_action_review_link
+                    } else {
+                        R.string.scan_action_open_link
+                    }
+                )
                 lastScanAction = {
-                    try {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(result.value)))
-                    } catch (_: Exception) {
-                        Toast.makeText(this, getString(R.string.scan_link_error), Toast.LENGTH_LONG)
-                            .show()
+                    if (safetyAssessment.isSuspicious) {
+                        showSuspiciousUrlDialog(result.value, safetyAssessment)
+                        AppTelemetry.logEvent("suspicious_url_review_requested")
+                    } else {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(result.value)))
+                        } catch (_: Exception) {
+                            Toast.makeText(this, getString(R.string.scan_link_error), Toast.LENGTH_LONG)
+                                .show()
+                        }
                     }
                 }
                 buttonScanSecondaryAction.visibility = View.VISIBLE
@@ -1173,14 +1210,37 @@ class MainActivity : ComponentActivity() {
                 useInCreateAction = {
                     applyScannedResultToCreate(result)
                 }
+                if (safetyAssessment.isSuspicious) {
+                    AppTelemetry.logEvent("suspicious_url_scanned")
+                }
             }
 
             is ScanResult.Phone -> {
+                val safetyAssessment = assessPhoneSafety(result.value)
                 textViewScanResultType.text = getString(R.string.content_type_phone)
-                textViewScanResultValue.text = result.value
-                buttonScanPrimaryAction.text = getString(R.string.scan_action_call)
+                textViewScanResultValue.text = if (safetyAssessment.isSuspicious) {
+                    getString(
+                        R.string.scan_phone_warning_format,
+                        result.value,
+                        safetyAssessment.reasons.joinToString(", ")
+                    )
+                } else {
+                    result.value
+                }
+                buttonScanPrimaryAction.text = getString(
+                    if (safetyAssessment.isSuspicious) {
+                        R.string.scan_action_review_call
+                    } else {
+                        R.string.scan_action_call
+                    }
+                )
                 lastScanAction = {
-                    startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(result.value)}")))
+                    if (safetyAssessment.isSuspicious) {
+                        showSuspiciousPhoneDialog(result.value, safetyAssessment)
+                        AppTelemetry.logEvent("suspicious_phone_review_requested")
+                    } else {
+                        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(result.value)}")))
+                    }
                 }
                 buttonScanSecondaryAction.visibility = View.VISIBLE
                 buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
@@ -1190,6 +1250,9 @@ class MainActivity : ComponentActivity() {
                 buttonScanUseInCreate.visibility = View.VISIBLE
                 useInCreateAction = {
                     applyScannedResultToCreate(result)
+                }
+                if (safetyAssessment.isSuspicious) {
+                    AppTelemetry.logEvent("suspicious_phone_scanned")
                 }
             }
 
@@ -1224,20 +1287,41 @@ class MainActivity : ComponentActivity() {
             }
 
             is ScanResult.Sms -> {
+                val safetyAssessment = assessSmsSafety(result.phoneNumber, result.message)
                 textViewScanResultType.text = getString(R.string.content_type_sms)
-                textViewScanResultValue.text =
-                    listOf(result.phoneNumber, result.message.orEmpty()).filter { it.isNotBlank() }
-                        .joinToString("\n")
-                buttonScanPrimaryAction.text = getString(R.string.scan_action_send_message)
-                lastScanAction = {
-                    val smsUri = Uri.parse("smsto:${Uri.encode(result.phoneNumber)}")
-                    startActivity(
-                        Intent(Intent.ACTION_SENDTO, smsUri).apply {
-                            if (!result.message.isNullOrBlank()) {
-                                putExtra("sms_body", result.message)
-                            }
-                        }
+                val smsValue = listOf(result.phoneNumber, result.message.orEmpty())
+                    .filter { it.isNotBlank() }
+                    .joinToString("\n")
+                textViewScanResultValue.text = if (safetyAssessment.isSuspicious) {
+                    getString(
+                        R.string.scan_sms_warning_format,
+                        smsValue,
+                        safetyAssessment.reasons.joinToString(", ")
                     )
+                } else {
+                    smsValue
+                }
+                buttonScanPrimaryAction.text = getString(
+                    if (safetyAssessment.isSuspicious) {
+                        R.string.scan_action_review_message
+                    } else {
+                        R.string.scan_action_send_message
+                    }
+                )
+                lastScanAction = {
+                    if (safetyAssessment.isSuspicious) {
+                        showSuspiciousSmsDialog(result, safetyAssessment)
+                        AppTelemetry.logEvent("suspicious_sms_review_requested")
+                    } else {
+                        val smsUri = Uri.parse("smsto:${Uri.encode(result.phoneNumber)}")
+                        startActivity(
+                            Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                                if (!result.message.isNullOrBlank()) {
+                                    putExtra("sms_body", result.message)
+                                }
+                            }
+                        )
+                    }
                 }
                 buttonScanSecondaryAction.visibility = View.VISIBLE
                 buttonScanSecondaryAction.text = getString(R.string.scan_action_copy)
@@ -1247,6 +1331,9 @@ class MainActivity : ComponentActivity() {
                 buttonScanUseInCreate.visibility = View.VISIBLE
                 useInCreateAction = {
                     applyScannedResultToCreate(result)
+                }
+                if (safetyAssessment.isSuspicious) {
+                    AppTelemetry.logEvent("suspicious_sms_scanned")
                 }
             }
 
@@ -1300,17 +1387,27 @@ class MainActivity : ComponentActivity() {
             }
 
             is ScanResult.Wifi -> {
+                val safetyAssessment = assessWifiSafety(result)
                 textViewScanResultType.text = getString(R.string.scan_result_type_wifi)
-                textViewScanResultValue.text = getString(
+                val wifiSummary = getString(
                     R.string.scan_wifi_result_format,
                     result.ssid,
                     result.security,
                     if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no),
                     result.password ?: getString(R.string.scan_wifi_password_open)
                 )
+                textViewScanResultValue.text = if (safetyAssessment.isSuspicious) {
+                    getString(
+                        R.string.scan_wifi_warning_format,
+                        wifiSummary,
+                        safetyAssessment.reasons.joinToString(", ")
+                    )
+                } else {
+                    wifiSummary
+                }
                 buttonScanPrimaryAction.text = getString(R.string.scan_action_connect_wifi)
                 lastScanAction = {
-                    showWifiConnectDialog(result)
+                    showWifiConnectDialog(result, safetyAssessment)
                 }
                 buttonScanSecondaryAction.visibility = View.VISIBLE
                 buttonScanSecondaryAction.text = getString(
@@ -1337,6 +1434,9 @@ class MainActivity : ComponentActivity() {
                 buttonScanUseInCreate.visibility = View.VISIBLE
                 useInCreateAction = {
                     applyScannedResultToCreate(result)
+                }
+                if (safetyAssessment.isSuspicious) {
+                    AppTelemetry.logEvent("suspicious_wifi_scanned")
                 }
             }
         }
@@ -1570,6 +1670,102 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private fun assessUrlSafety(url: String): UrlSafetyAssessment {
+        val reasons = mutableListOf<String>()
+        val uri = try {
+            Uri.parse(url)
+        } catch (_: Exception) {
+            return UrlSafetyAssessment(true, listOf(getString(R.string.scan_url_reason_invalid)))
+        }
+
+        val host = uri.host.orEmpty()
+        if (host.isBlank()) {
+            reasons += getString(R.string.scan_url_reason_missing_host)
+        }
+        if (uri.userInfo != null) {
+            reasons += getString(R.string.scan_url_reason_userinfo)
+        }
+        if (host.contains("xn--", ignoreCase = true)) {
+            reasons += getString(R.string.scan_url_reason_punycode)
+        }
+        if (host.matches(Regex("""\d{1,3}(\.\d{1,3}){3}"""))) {
+            reasons += getString(R.string.scan_url_reason_ip_host)
+        }
+        if (host.split('.').size >= 5) {
+            reasons += getString(R.string.scan_url_reason_many_subdomains)
+        }
+        val suspiciousShorteners = setOf(
+            "bit.ly", "t.co", "tinyurl.com", "goo.gl", "ow.ly",
+            "buff.ly", "is.gd", "cutt.ly", "rebrand.ly", "tiny.cc"
+        )
+        if (host.lowercase() in suspiciousShorteners) {
+            reasons += getString(R.string.scan_url_reason_shortener)
+        }
+        val port = uri.port
+        val defaultPort = when (uri.scheme?.lowercase()) {
+            "http" -> 80
+            "https" -> 443
+            else -> -1
+        }
+        if (port != -1 && defaultPort != -1 && port != defaultPort) {
+            reasons += getString(R.string.scan_url_reason_unusual_port)
+        }
+
+        return UrlSafetyAssessment(reasons.isNotEmpty(), reasons)
+    }
+
+    private fun assessPhoneSafety(number: String): NumberSafetyAssessment {
+        val reasons = mutableListOf<String>()
+        val trimmed = number.trim()
+        val normalizedDigits = trimmed.filter { it.isDigit() }
+
+        if (trimmed.any { it == '*' || it == '#' }) {
+            reasons += getString(R.string.scan_number_reason_service_code)
+        }
+        if (normalizedDigits.length in 3..6) {
+            reasons += getString(R.string.scan_number_reason_short_code)
+        }
+        if (
+            normalizedDigits.startsWith("1900") ||
+            normalizedDigits.startsWith("1976") ||
+            normalizedDigits.startsWith("0900") ||
+            normalizedDigits.startsWith("0898")
+        ) {
+            reasons += getString(R.string.scan_number_reason_premium_rate)
+        }
+
+        return NumberSafetyAssessment(reasons.isNotEmpty(), reasons)
+    }
+
+    private fun assessSmsSafety(number: String, message: String?): NumberSafetyAssessment {
+        val reasons = assessPhoneSafety(number).reasons.toMutableList()
+        val trimmedMessage = message.orEmpty().trim()
+        val lowerMessage = trimmedMessage.lowercase()
+
+        if (trimmedMessage.isNotBlank() && trimmedMessage.length >= 160) {
+            reasons += getString(R.string.scan_sms_reason_long_message)
+        }
+        if (
+            lowerMessage.contains("stop") ||
+            lowerMessage.contains("subscribe") ||
+            lowerMessage.contains("confirm") ||
+            lowerMessage.contains("yes")
+        ) {
+            reasons += getString(R.string.scan_sms_reason_confirmation_keywords)
+        }
+
+        return NumberSafetyAssessment(reasons.isNotEmpty(), reasons.distinct())
+    }
+
+    private fun assessWifiSafety(result: ScanResult.Wifi): WifiSafetyAssessment {
+        val reasons = mutableListOf<String>()
+        when (result.security.uppercase()) {
+            "OPEN", "NOPASS" -> reasons += getString(R.string.scan_wifi_reason_open)
+            "WEP" -> reasons += getString(R.string.scan_wifi_reason_wep)
+        }
+        return WifiSafetyAssessment(reasons.isNotEmpty(), reasons)
+    }
+
     private fun copyToClipboard(label: String, value: String) {
         copyToClipboard(label, value, R.string.scan_copy_success)
     }
@@ -1580,17 +1776,29 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, getString(messageResId), Toast.LENGTH_LONG).show()
     }
 
-    private fun showWifiConnectDialog(result: ScanResult.Wifi) {
+    private fun showWifiConnectDialog(
+        result: ScanResult.Wifi,
+        safetyAssessment: WifiSafetyAssessment
+    ) {
+        val message = if (safetyAssessment.isSuspicious) {
+            getString(
+                R.string.scan_wifi_connect_warning_message,
+                result.ssid,
+                result.security,
+                if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no),
+                safetyAssessment.reasons.joinToString("\n• ", prefix = "• ")
+            )
+        } else {
+            getString(
+                R.string.scan_wifi_connect_message,
+                result.ssid,
+                result.security,
+                if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no)
+            )
+        }
         AlertDialog.Builder(this)
             .setTitle(R.string.scan_wifi_connect_title)
-            .setMessage(
-                getString(
-                    R.string.scan_wifi_connect_message,
-                    result.ssid,
-                    result.security,
-                    if (result.hidden) getString(R.string.wifi_hidden_yes) else getString(R.string.wifi_hidden_no)
-                )
-            )
+            .setMessage(message)
             .setPositiveButton(R.string.scan_action_connect_wifi) { _, _ ->
                 val suggested = suggestWifiNetwork(result)
                 if (!suggested) {
@@ -1617,6 +1825,94 @@ class MainActivity : ComponentActivity() {
             .setNegativeButton(R.string.scan_action_open_wifi_settings) { _, _ ->
                 startActivity(Intent(Settings.Panel.ACTION_INTERNET_CONNECTIVITY))
             }
+            .show()
+    }
+
+    private fun showSuspiciousUrlDialog(
+        url: String,
+        safetyAssessment: UrlSafetyAssessment
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.scan_url_warning_title)
+            .setMessage(
+                getString(
+                    R.string.scan_url_warning_dialog_format,
+                    url,
+                    safetyAssessment.reasons.joinToString("\n• ", prefix = "• ")
+                )
+            )
+            .setPositiveButton(R.string.scan_action_open_anyway) { _, _ ->
+                try {
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                } catch (_: Exception) {
+                    Toast.makeText(this, getString(R.string.scan_link_error), Toast.LENGTH_LONG)
+                        .show()
+                }
+            }
+            .setNeutralButton(R.string.scan_action_copy) { _, _ ->
+                copyToClipboard(getString(R.string.scan_result_type_url), url)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showSuspiciousPhoneDialog(
+        number: String,
+        safetyAssessment: NumberSafetyAssessment
+    ) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.scan_phone_warning_title)
+            .setMessage(
+                getString(
+                    R.string.scan_phone_warning_dialog_format,
+                    number,
+                    safetyAssessment.reasons.joinToString("\n• ", prefix = "• ")
+                )
+            )
+            .setPositiveButton(R.string.scan_action_call_anyway) { _, _ ->
+                startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")))
+            }
+            .setNeutralButton(R.string.scan_action_copy) { _, _ ->
+                copyToClipboard(getString(R.string.content_type_phone), number)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showSuspiciousSmsDialog(
+        result: ScanResult.Sms,
+        safetyAssessment: NumberSafetyAssessment
+    ) {
+        val smsUri = Uri.parse("smsto:${Uri.encode(result.phoneNumber)}")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.scan_sms_warning_title)
+            .setMessage(
+                getString(
+                    R.string.scan_sms_warning_dialog_format,
+                    listOf(result.phoneNumber, result.message.orEmpty())
+                        .filter { it.isNotBlank() }
+                        .joinToString("\n"),
+                    safetyAssessment.reasons.joinToString("\n• ", prefix = "• ")
+                )
+            )
+            .setPositiveButton(R.string.scan_action_send_anyway) { _, _ ->
+                startActivity(
+                    Intent(Intent.ACTION_SENDTO, smsUri).apply {
+                        if (!result.message.isNullOrBlank()) {
+                            putExtra("sms_body", result.message)
+                        }
+                    }
+                )
+            }
+            .setNeutralButton(R.string.scan_action_copy) { _, _ ->
+                copyToClipboard(
+                    getString(R.string.content_type_sms),
+                    listOf(result.phoneNumber, result.message.orEmpty())
+                        .filter { it.isNotBlank() }
+                        .joinToString("\n")
+                )
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
@@ -2362,7 +2658,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun announceAccessibilityMessage(message: String) {
-        findViewById<View>(android.R.id.content)?.announceForAccessibility(message)
+        textViewAccessibilityAnnouncements.text = ""
+        textViewAccessibilityAnnouncements.post {
+            textViewAccessibilityAnnouncements.text = message
+        }
     }
 
     private fun combineImageAndText(image: Bitmap, text: String): Bitmap {
