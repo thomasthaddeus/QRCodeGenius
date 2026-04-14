@@ -40,34 +40,36 @@ class QuickQrWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         widgetId: Int
     ) {
-        val clipboardText = readClipboardText(context).trim()
-        val displayText = if (clipboardText.isBlank()) {
-            context.getString(R.string.widget_clipboard_empty_state)
-        } else {
-            clipboardText
+        PerformanceTracer.trace("widget_update", mapOf("widget_id" to widgetId.toString())) {
+            val clipboardText = readClipboardText(context).trim()
+            val displayText = if (clipboardText.isBlank()) {
+                context.getString(R.string.widget_clipboard_empty_state)
+            } else {
+                clipboardText
+            }
+
+            val bitmap = createWidgetQrBitmap(context, clipboardText)
+            val views = RemoteViews(context.packageName, R.layout.widget_quick_qr).apply {
+                setTextViewText(R.id.textViewWidgetTitle, context.getString(R.string.widget_title))
+                setTextViewText(R.id.textViewWidgetSubtitle, displayText.take(80))
+                setImageViewBitmap(R.id.imageViewWidgetQr, bitmap)
+
+                setOnClickPendingIntent(
+                    R.id.buttonWidgetRefresh,
+                    createRefreshPendingIntent(context)
+                )
+                setOnClickPendingIntent(
+                    R.id.imageViewWidgetQr,
+                    createLaunchPendingIntent(context, clipboardText)
+                )
+                setOnClickPendingIntent(
+                    R.id.textViewWidgetSubtitle,
+                    createLaunchPendingIntent(context, clipboardText)
+                )
+            }
+
+            appWidgetManager.updateAppWidget(widgetId, views)
         }
-
-        val bitmap = createWidgetQrBitmap(context, clipboardText)
-        val views = RemoteViews(context.packageName, R.layout.widget_quick_qr).apply {
-            setTextViewText(R.id.textViewWidgetTitle, context.getString(R.string.widget_title))
-            setTextViewText(R.id.textViewWidgetSubtitle, displayText.take(80))
-            setImageViewBitmap(R.id.imageViewWidgetQr, bitmap)
-
-            setOnClickPendingIntent(
-                R.id.buttonWidgetRefresh,
-                createRefreshPendingIntent(context)
-            )
-            setOnClickPendingIntent(
-                R.id.imageViewWidgetQr,
-                createLaunchPendingIntent(context, clipboardText)
-            )
-            setOnClickPendingIntent(
-                R.id.textViewWidgetSubtitle,
-                createLaunchPendingIntent(context, clipboardText)
-            )
-        }
-
-        appWidgetManager.updateAppWidget(widgetId, views)
     }
 
     private fun createWidgetQrBitmap(context: Context, text: String): Bitmap {

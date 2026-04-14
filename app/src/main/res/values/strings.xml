@@ -96,6 +96,8 @@
     <string name="feedback_no_comments">No additional comments provided.</string>
     <string name="feedback_email_error">No email app is available to send feedback right now.</string>
     <string name="feedback_store_error">Unable to open the Play Store listing right now.</string>
+    <string name="perf_panel_toggle">Performance Logs</string>
+    <string name="perf_panel_empty">No performance logs captured yet.</string>
     <string name="widget_title">Quick QR</string>
     <string name="widget_description">Generate a QR code from your clipboard without opening the full app.</string>
     <string name="widget_refresh">Use Clipboard</string>

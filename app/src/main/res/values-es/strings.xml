@@ -96,6 +96,8 @@
     <string name="feedback_no_comments">No se proporcionaron comentarios adicionales.</string>
     <string name="feedback_email_error">No hay una app de correo disponible para enviar comentarios ahora mismo.</string>
     <string name="feedback_store_error">No se pudo abrir la ficha de Play Store en este momento.</string>
+    <string name="perf_panel_toggle">Registros de rendimiento</string>
+    <string name="perf_panel_empty">Aún no se capturaron registros de rendimiento.</string>
     <string name="widget_title">QR rápido</string>
     <string name="widget_description">Genera un código QR desde tu portapapeles sin abrir toda la app.</string>
     <string name="widget_refresh">Usar portapapeles</string>
