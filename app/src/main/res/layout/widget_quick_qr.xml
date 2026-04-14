@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_preview_surface"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/textViewWidgetTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/widget_title"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/textViewWidgetSubtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:maxLines="2"
+        android:text="@string/widget_clipboard_empty_state"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp" />
+
+    <ImageView
+        android:id="@+id/imageViewWidgetQr"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:adjustViewBounds="true"
+        android:contentDescription="@string/widget_qr_content_description"
+        android:scaleType="fitCenter" />
+
+    <Button
+        android:id="@+id/buttonWidgetRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_primary_bg"
+        android:text="@string/widget_refresh"
+        android:textAllCaps="false"
+        android:textColor="@color/button_primary_text" />
+
+</LinearLayout>

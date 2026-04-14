@@ -2,6 +2,7 @@ package com.programmingtools.app
 
 import android.Manifest
 import android.app.AlertDialog
+import android.appwidget.AppWidgetManager
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -180,6 +181,8 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val EXTRA_WIDGET_TEXT = "extra_widget_text"
+        private const val EXTRA_WIDGET_AUTOGENERATE = "extra_widget_autogenerate"
         private const val STATE_TEXT = "state_text"
         private const val STATE_SCREEN_MODE = "state_screen_mode"
         private const val STATE_CONTENT_TYPE = "state_content_type"
@@ -671,6 +674,8 @@ class MainActivity : ComponentActivity() {
 
             updateScreenMode(currentScreenMode)
         }
+
+        handleWidgetIntent(intent)
     }
 
     private fun shareBitmap(bitmap: Bitmap) {
@@ -725,6 +730,12 @@ class MainActivity : ComponentActivity() {
         if (currentScreenMode == ScreenMode.SCAN && hasCameraPermission()) {
             startScanner()
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleWidgetIntent(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1046,6 +1057,27 @@ class MainActivity : ComponentActivity() {
                 rawValue = rawValue
             )
         }
+    }
+
+    private fun handleWidgetIntent(intent: Intent?) {
+        val widgetText = intent?.getStringExtra(EXTRA_WIDGET_TEXT)?.trim().orEmpty()
+        val shouldAutogenerate = intent?.getBooleanExtra(EXTRA_WIDGET_AUTOGENERATE, false) == true
+        if (widgetText.isBlank() && !shouldAutogenerate) {
+            return
+        }
+
+        updateScreenMode(ScreenMode.CREATE)
+        updateSelectedContentType(ContentType.TEXT)
+        editText.setText(widgetText)
+        if (shouldAutogenerate && widgetText.isNotBlank()) {
+            renderQrFromInputs(showValidationError = false)
+            Toast.makeText(this, getString(R.string.widget_qr_loaded), Toast.LENGTH_LONG).show()
+        } else if (widgetText.isBlank()) {
+            Toast.makeText(this, getString(R.string.widget_empty_clipboard), Toast.LENGTH_LONG).show()
+        }
+
+        intent?.removeExtra(EXTRA_WIDGET_TEXT)
+        intent?.removeExtra(EXTRA_WIDGET_AUTOGENERATE)
     }
 
     private fun applyScannedRawValueToCreate(rawValue: String) {
