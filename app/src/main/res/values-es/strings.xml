@@ -96,6 +96,14 @@
     <string name="feedback_no_comments">No se proporcionaron comentarios adicionales.</string>
     <string name="feedback_email_error">No hay una app de correo disponible para enviar comentarios ahora mismo.</string>
     <string name="feedback_store_error">No se pudo abrir la ficha de Play Store en este momento.</string>
+    <string name="widget_title">QR rápido</string>
+    <string name="widget_description">Genera un código QR desde tu portapapeles sin abrir toda la app.</string>
+    <string name="widget_refresh">Usar portapapeles</string>
+    <string name="widget_clipboard_empty_state">Primero copia un texto y luego toca Usar portapapeles para generar un QR aquí.</string>
+    <string name="widget_sample_text">Widget de QR rápido</string>
+    <string name="widget_qr_content_description">Código QR mostrado en el widget de inicio</string>
+    <string name="widget_qr_loaded">El texto del portapapeles se cargó en el modo Crear.</string>
+    <string name="widget_empty_clipboard">Primero copia algo de texto y luego vuelve a usar el widget.</string>
     <string name="history_action_use_in_create">Usar en Crear</string>
     <string name="history_action_copy">Copiar</string>
     <string name="history_action_delete">Eliminar</string>

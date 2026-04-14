@@ -96,6 +96,14 @@
     <string name="feedback_no_comments">No additional comments provided.</string>
     <string name="feedback_email_error">No email app is available to send feedback right now.</string>
     <string name="feedback_store_error">Unable to open the Play Store listing right now.</string>
+    <string name="widget_title">Quick QR</string>
+    <string name="widget_description">Generate a QR code from your clipboard without opening the full app.</string>
+    <string name="widget_refresh">Use Clipboard</string>
+    <string name="widget_clipboard_empty_state">Copy text first, then tap Use Clipboard to generate a QR here.</string>
+    <string name="widget_sample_text">Quick QR Widget</string>
+    <string name="widget_qr_content_description">QR code shown in the home screen widget</string>
+    <string name="widget_qr_loaded">Clipboard text loaded into Create mode.</string>
+    <string name="widget_empty_clipboard">Copy some text first, then use the widget again.</string>
     <string name="history_action_use_in_create">Use in Create</string>
     <string name="history_action_copy">Copy</string>
     <string name="history_action_delete">Delete</string>
