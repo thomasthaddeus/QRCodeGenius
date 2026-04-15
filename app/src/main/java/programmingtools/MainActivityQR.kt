@@ -217,6 +217,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var buttonResetScan: Button
     private lateinit var buttonClearHistory: Button
     private lateinit var buttonOpenFeedback: Button
+    private lateinit var buttonExportHistory: Button
+    private lateinit var buttonImportHistory: Button
     private lateinit var buttonTogglePerfPanel: Button
     private lateinit var textViewScanPermissionState: TextView
     private lateinit var textViewScanStatus: TextView
@@ -329,6 +331,19 @@ class MainActivity : ComponentActivity() {
             pendingSaveFormat = SaveFormat.PNG
         }
 
+    private val exportHistoryDocument =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            val uri = result.data?.data ?: return@registerForActivityResult
+            exportHistoryToUri(uri)
+        }
+
+    private val importHistoryDocument =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            if (uri != null) {
+                confirmImportHistory(uri)
+            }
+        }
+
     private val requestCameraPermission =
         registerForActivityResult(RequestPermission()) { granted ->
             if (granted) {
@@ -378,6 +393,8 @@ class MainActivity : ComponentActivity() {
         buttonResetScan = findViewById(R.id.buttonResetScan)
         buttonClearHistory = findViewById(R.id.buttonClearHistory)
         buttonOpenFeedback = findViewById(R.id.buttonOpenFeedback)
+        buttonExportHistory = findViewById(R.id.buttonExportHistory)
+        buttonImportHistory = findViewById(R.id.buttonImportHistory)
         buttonTogglePerfPanel = findViewById(R.id.buttonTogglePerfPanel)
         textViewScanPermissionState = findViewById(R.id.textViewScanPermissionState)
         textViewScanStatus = findViewById(R.id.textViewScanStatus)
@@ -514,6 +531,14 @@ class MainActivity : ComponentActivity() {
 
         buttonOpenFeedback.setOnClickListener {
             showFeedbackDialog()
+        }
+
+        buttonExportHistory.setOnClickListener {
+            exportHistoryDocument.launch(createHistoryExportIntent())
+        }
+
+        buttonImportHistory.setOnClickListener {
+            importHistoryDocument.launch(arrayOf("application/json", "text/plain"))
         }
 
         buttonTogglePerfPanel.setOnClickListener {
@@ -992,6 +1017,20 @@ class MainActivity : ComponentActivity() {
             .setPositiveButton(R.string.history_clear_all) { _, _ ->
                 scanHistoryStore.clear()
                 renderHistory()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmImportHistory(uri: Uri) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.history_import)
+            .setMessage(R.string.history_import_confirm)
+            .setPositiveButton(R.string.history_import_merge) { _, _ ->
+                importHistoryFromUri(uri, replaceExisting = false)
+            }
+            .setNeutralButton(R.string.history_import_replace) { _, _ ->
+                importHistoryFromUri(uri, replaceExisting = true)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -1952,6 +1991,54 @@ class MainActivity : ComponentActivity() {
             }
         }
         AppTelemetry.logEvent("feedback_rate_store_opened")
+    }
+
+    private fun createHistoryExportIntent(): Intent {
+        return Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+            putExtra(Intent.EXTRA_TITLE, getString(R.string.history_export_filename))
+        }
+    }
+
+    private fun exportHistoryToUri(uri: Uri) {
+        try {
+            val historyJson = scanHistoryStore.exportJson()
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                outputStream.write(historyJson.toByteArray())
+                outputStream.flush()
+            }
+            Toast.makeText(this, getString(R.string.history_export_success), Toast.LENGTH_LONG).show()
+            AppTelemetry.logEvent("history_exported")
+        } catch (e: Exception) {
+            AppTelemetry.recordNonFatal("history_export_failed", e)
+            Toast.makeText(
+                this,
+                getString(R.string.history_export_error, e.localizedMessage ?: ""),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun importHistoryFromUri(uri: Uri, replaceExisting: Boolean) {
+        try {
+            val rawJson = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                .orEmpty()
+            scanHistoryStore.importJson(rawJson, replaceExisting = replaceExisting)
+            renderHistory()
+            Toast.makeText(this, getString(R.string.history_import_success), Toast.LENGTH_LONG).show()
+            AppTelemetry.logEvent(
+                "history_imported",
+                mapOf("replace_existing" to replaceExisting.toString())
+            )
+        } catch (e: Exception) {
+            AppTelemetry.recordNonFatal("history_import_failed", e)
+            Toast.makeText(
+                this,
+                getString(R.string.history_import_error, e.localizedMessage ?: ""),
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     private fun showWifiConnectDialog(

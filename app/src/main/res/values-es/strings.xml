@@ -82,6 +82,16 @@
     <string name="history_empty">Aún no hay historial de escaneos.</string>
     <string name="history_clear_all">Borrar historial</string>
     <string name="history_clear_confirm">¿Eliminar todo el historial de escaneos guardado en este dispositivo?</string>
+    <string name="history_export">Exportar historial</string>
+    <string name="history_import">Importar historial</string>
+    <string name="history_import_confirm">Importa el historial de escaneos guardado desde un archivo en la nube o una copia de seguridad del dispositivo. Puedes combinarlo con el historial actual o reemplazarlo por completo.</string>
+    <string name="history_import_merge">Combinar</string>
+    <string name="history_import_replace">Reemplazar</string>
+    <string name="history_export_filename">historial-escaneos.json</string>
+    <string name="history_export_success">El historial de escaneos se exportó correctamente.</string>
+    <string name="history_export_error">No se pudo exportar el historial de escaneos: %1$s</string>
+    <string name="history_import_success">El historial de escaneos se importó correctamente.</string>
+    <string name="history_import_error">No se pudo importar el historial de escaneos: %1$s</string>
     <string name="feedback_open_center">Calificar y opinar</string>
     <string name="feedback_dialog_title">Califica QRCodeGenius</string>
     <string name="feedback_dialog_message">Comparte una calificación rápida y notas opcionales. Puedes enviar comentarios directamente o abrir la ficha de Play Store.</string>
