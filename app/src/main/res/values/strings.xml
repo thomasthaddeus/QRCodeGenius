@@ -82,6 +82,16 @@
     <string name="history_empty">No scan history yet.</string>
     <string name="history_clear_all">Clear History</string>
     <string name="history_clear_confirm">Remove all saved scan history from this device?</string>
+    <string name="history_export">Export History</string>
+    <string name="history_import">Import History</string>
+    <string name="history_import_confirm">Import saved scan history from a cloud file or device backup. You can merge it with the current history or replace the current history entirely.</string>
+    <string name="history_import_merge">Merge</string>
+    <string name="history_import_replace">Replace</string>
+    <string name="history_export_filename">scan-history.json</string>
+    <string name="history_export_success">Scan history exported successfully.</string>
+    <string name="history_export_error">Could not export scan history: %1$s</string>
+    <string name="history_import_success">Scan history imported successfully.</string>
+    <string name="history_import_error">Could not import scan history: %1$s</string>
     <string name="feedback_open_center">Rate &amp; Feedback</string>
     <string name="feedback_dialog_title">Rate QRCodeGenius</string>
     <string name="feedback_dialog_message">Share a quick star rating and optional notes. You can send feedback directly or open the Play Store listing.</string>

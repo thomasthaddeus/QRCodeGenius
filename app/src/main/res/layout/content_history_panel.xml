@@ -42,6 +42,26 @@
         android:textColor="@color/button_primary_text" />
 
     <Button
+        android:id="@+id/buttonExportHistory"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_secondary_bg"
+        android:text="@string/history_export"
+        android:textAllCaps="false"
+        android:textColor="@color/button_secondary_text" />
+
+    <Button
+        android:id="@+id/buttonImportHistory"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_secondary_bg"
+        android:text="@string/history_import"
+        android:textAllCaps="false"
+        android:textColor="@color/button_secondary_text" />
+
+    <Button
         android:id="@+id/buttonTogglePerfPanel"
         android:layout_width="match_parent"
         android:layout_height="52dp"

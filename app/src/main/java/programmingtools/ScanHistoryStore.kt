@@ -16,7 +16,7 @@ data class ScanHistoryEntry(
 
 class ScanHistoryStore(context: Context) {
     private val preferences =
-        context.getSharedPreferences("scan_history_store", Context.MODE_PRIVATE)
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
 
     fun list(): List<ScanHistoryEntry> {
         val rawJson = preferences.getString(KEY_ENTRIES, "[]").orEmpty()
@@ -63,6 +63,40 @@ class ScanHistoryStore(context: Context) {
         preferences.edit().putString(KEY_ENTRIES, "[]").apply()
     }
 
+    fun exportJson(): String {
+        return preferences.getString(KEY_ENTRIES, "[]").orEmpty()
+    }
+
+    fun importJson(rawJson: String, replaceExisting: Boolean) {
+        val importedEntries = parseEntries(rawJson)
+        val merged = if (replaceExisting) {
+            importedEntries
+        } else {
+            val combined = (importedEntries + list()).associateBy { it.rawValue }
+            combined.values.sortedByDescending { it.timestamp }
+        }
+        save(merged.take(MAX_ENTRIES))
+    }
+
+    private fun parseEntries(rawJson: String): List<ScanHistoryEntry> {
+        val array = JSONArray(rawJson)
+        return buildList {
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                add(
+                    ScanHistoryEntry(
+                        id = item.optString(KEY_ID).ifBlank { UUID.randomUUID().toString() },
+                        rawValue = item.optString(KEY_RAW_VALUE),
+                        type = item.optString(KEY_TYPE),
+                        title = item.optString(KEY_TITLE),
+                        summary = item.optString(KEY_SUMMARY),
+                        timestamp = item.optLong(KEY_TIMESTAMP)
+                    )
+                )
+            }
+        }.filter { it.rawValue.isNotBlank() }
+    }
+
     private fun save(entries: List<ScanHistoryEntry>) {
         val array = JSONArray()
         entries.forEach { entry ->
@@ -81,6 +115,7 @@ class ScanHistoryStore(context: Context) {
     }
 
     companion object {
+        const val PREFERENCES_NAME = "scan_history_store"
         private const val KEY_ENTRIES = "entries"
         private const val KEY_ID = "id"
         private const val KEY_RAW_VALUE = "raw_value"
