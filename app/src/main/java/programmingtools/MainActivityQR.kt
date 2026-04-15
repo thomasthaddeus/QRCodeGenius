@@ -18,6 +18,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import android.provider.Settings
+import android.text.method.ScrollingMovementMethod
 import android.util.Size
 import android.view.LayoutInflater
 import android.view.View
@@ -216,12 +217,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var buttonResetScan: Button
     private lateinit var buttonClearHistory: Button
     private lateinit var buttonOpenFeedback: Button
+    private lateinit var buttonTogglePerfPanel: Button
     private lateinit var textViewScanPermissionState: TextView
     private lateinit var textViewScanStatus: TextView
     private lateinit var scanResultContainer: View
     private lateinit var textViewScanResultType: TextView
     private lateinit var textViewScanResultValue: TextView
     private lateinit var textViewHistoryEmpty: TextView
+    private lateinit var textViewPerfLogs: TextView
     private lateinit var buttonScanPrimaryAction: Button
     private lateinit var buttonScanSecondaryAction: Button
     private lateinit var buttonScanUseInCreate: Button
@@ -285,6 +288,8 @@ class MainActivity : ComponentActivity() {
     private var currentWifiSecurity: WifiSecurity = WifiSecurity.WPA_WPA2
     private var currentWifiHidden: Boolean = false
     private var currentLogoUri: Uri? = null
+    private var cachedLogoUri: Uri? = null
+    private var cachedLogoBitmap: Bitmap? = null
     private var lastScannedRawValue: String? = null
     private var lastScanTimestampMs: Long = 0L
     private var scannerPaused: Boolean = false
@@ -302,6 +307,8 @@ class MainActivity : ComponentActivity() {
     private var pendingSaveFormat: SaveFormat = SaveFormat.PNG
     private var selectedColor: Int = Color.BLACK
     private var selectedBackgroundColor: Int = Color.WHITE
+    private var lastRenderedSignature: String? = null
+    private var isPerfPanelVisible: Boolean = false
     private val qrCodeGenerator = QRCodeGenerator()
     private val scannerInactivityRunnable = Runnable {
         if (currentScreenMode == ScreenMode.SCAN) {
@@ -371,12 +378,14 @@ class MainActivity : ComponentActivity() {
         buttonResetScan = findViewById(R.id.buttonResetScan)
         buttonClearHistory = findViewById(R.id.buttonClearHistory)
         buttonOpenFeedback = findViewById(R.id.buttonOpenFeedback)
+        buttonTogglePerfPanel = findViewById(R.id.buttonTogglePerfPanel)
         textViewScanPermissionState = findViewById(R.id.textViewScanPermissionState)
         textViewScanStatus = findViewById(R.id.textViewScanStatus)
         scanResultContainer = findViewById(R.id.scanResultContainer)
         textViewScanResultType = findViewById(R.id.textViewScanResultType)
         textViewScanResultValue = findViewById(R.id.textViewScanResultValue)
         textViewHistoryEmpty = findViewById(R.id.textViewHistoryEmpty)
+        textViewPerfLogs = findViewById(R.id.textViewPerfLogs)
         buttonScanPrimaryAction = findViewById(R.id.buttonScanPrimaryAction)
         buttonScanSecondaryAction = findViewById(R.id.buttonScanSecondaryAction)
         buttonScanUseInCreate = findViewById(R.id.buttonScanUseInCreate)
@@ -464,6 +473,7 @@ class MainActivity : ComponentActivity() {
         updateScanPermissionUi(hasCameraPermission())
         updateScanStatus(getString(R.string.scan_status_idle))
         updateScanResult(null)
+        setupPerformanceUi()
         updateScreenMode(ScreenMode.CREATE)
 
         buttonModeCreate.setOnClickListener {
@@ -504,6 +514,11 @@ class MainActivity : ComponentActivity() {
 
         buttonOpenFeedback.setOnClickListener {
             showFeedbackDialog()
+        }
+
+        buttonTogglePerfPanel.setOnClickListener {
+            isPerfPanelVisible = !isPerfPanelVisible
+            syncPerformanceUi()
         }
 
         buttonGenerate.setOnClickListener {
@@ -637,6 +652,7 @@ class MainActivity : ComponentActivity() {
                 )
             imageViewQRCode.setImageBitmap(sampleBitmap)
             generatedBitmap = sampleBitmap
+            lastRenderedSignature = null
             updatePreviewState(hasPreview = true)
             AppTelemetry.logEvent("sample_generated")
             announceAccessibilityMessage(getString(R.string.sample_generated_announcement))
@@ -680,27 +696,29 @@ class MainActivity : ComponentActivity() {
 
     private fun shareBitmap(bitmap: Bitmap) {
         try {
-            val shareDirectory = File(cacheDir, "shared_images").apply { mkdirs() }
-            val shareFile = File(shareDirectory, "qr-code-share.png")
-            FileOutputStream(shareFile).use { outputStream ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            PerformanceTracer.trace("share_bitmap_prepare") {
+                val shareDirectory = File(cacheDir, "shared_images").apply { mkdirs() }
+                val shareFile = File(shareDirectory, "qr-code-share.png")
+                FileOutputStream(shareFile).use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+
+                val imageUri = FileProvider.getUriForFile(
+                    this,
+                    "${packageName}.fileprovider",
+                    shareFile
+                )
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, imageUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                startActivity(
+                    Intent.createChooser(shareIntent, getString(R.string.share_qr_chooser_title))
+                )
             }
-
-            val imageUri = FileProvider.getUriForFile(
-                this,
-                "${packageName}.fileprovider",
-                shareFile
-            )
-
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, imageUri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-
-            startActivity(
-                Intent.createChooser(shareIntent, getString(R.string.share_qr_chooser_title))
-            )
         } catch (e: IOException) {
             AppTelemetry.recordNonFatal("share_failed", e)
             Toast.makeText(
@@ -859,6 +877,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun renderHistory() {
+        val renderStart = System.nanoTime()
         val entries = scanHistoryStore.list()
         historyListContainer.removeAllViews()
         textViewHistoryEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
@@ -957,6 +976,13 @@ class MainActivity : ComponentActivity() {
             card.addView(actionRow)
             historyListContainer.addView(card)
         }
+        val renderDurationMs = (System.nanoTime() - renderStart) / 1_000_000
+        PerformanceTracer.record(
+            "history_render",
+            renderDurationMs,
+            mapOf("entries" to entries.size.toString())
+        )
+        syncPerformanceUi()
     }
 
     private fun confirmClearHistory() {
@@ -971,8 +997,35 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    private fun setupPerformanceUi() {
+        textViewPerfLogs.movementMethod = ScrollingMovementMethod()
+        if (!PerformanceTracer.isEnabled()) {
+            buttonTogglePerfPanel.visibility = View.GONE
+            textViewPerfLogs.visibility = View.GONE
+            return
+        }
+
+        buttonTogglePerfPanel.visibility = View.VISIBLE
+        syncPerformanceUi()
+    }
+
+    private fun syncPerformanceUi() {
+        if (!PerformanceTracer.isEnabled()) {
+            buttonTogglePerfPanel.visibility = View.GONE
+            textViewPerfLogs.visibility = View.GONE
+            return
+        }
+
+        textViewPerfLogs.visibility = if (isPerfPanelVisible) View.VISIBLE else View.GONE
+        textViewPerfLogs.text = PerformanceTracer.recentRecords().ifBlank {
+            getString(R.string.perf_panel_empty)
+        }
+    }
+
     private fun showFeedbackDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_feedback, null)
+        val dialogView = PerformanceTracer.trace("feedback_dialog_inflate") {
+            LayoutInflater.from(this).inflate(R.layout.dialog_feedback, null)
+        }
         val ratingBar = dialogView.findViewById<RatingBar>(R.id.ratingBarFeedback)
         val editTextFeedbackNotes =
             dialogView.findViewById<EditText>(R.id.editTextFeedbackNotes)
@@ -2110,12 +2163,20 @@ class MainActivity : ComponentActivity() {
 
     private fun selectedLogoBitmap(): Bitmap? {
         val uri = currentLogoUri ?: return null
+        if (uri == cachedLogoUri) {
+            return cachedLogoBitmap
+        }
         return try {
-            contentResolver.openInputStream(uri)?.use { inputStream ->
+            val decodedBitmap = contentResolver.openInputStream(uri)?.use { inputStream ->
                 BitmapFactory.decodeStream(inputStream)
             }
+            cachedLogoUri = uri
+            cachedLogoBitmap = decodedBitmap
+            decodedBitmap
         } catch (e: Exception) {
             AppTelemetry.recordNonFatal("logo_decode_failed", e)
+            cachedLogoUri = uri
+            cachedLogoBitmap = null
             null
         }
     }
@@ -2243,6 +2304,8 @@ class MainActivity : ComponentActivity() {
 
     private fun updateSelectedLogo(uri: Uri?) {
         currentLogoUri = uri
+        cachedLogoUri = null
+        cachedLogoBitmap = null
         val hasLogo = uri != null
         textViewSelectedLogo.text = if (hasLogo) {
             getString(
@@ -2283,29 +2346,56 @@ class MainActivity : ComponentActivity() {
         val qrContent = buildQrContent(showValidationError) ?: run {
             imageViewQRCode.setImageDrawable(null)
             generatedBitmap = null
+            lastRenderedSignature = null
             updatePreviewState(hasPreview = false)
             return false
         }
 
         val size = editTextSize.text.toString().toIntOrNull() ?: 256
         val color = selectedColor
-        val qrBitmap = qrCodeGenerator.generateQRCode(
-            text = qrContent,
-            width = size,
-            height = size,
-            foregroundColor = color,
-            backgroundColor = selectedBackgroundColor,
-            designStyle = selectedDesignStyle(),
-            eyeStyle = selectedEyeStyle(),
-            centerBadge = selectedCenterBadge(),
-            centerLogo = selectedLogoBitmap()
-        )
+        val currentSignature = buildRenderSignature(qrContent, size, color)
+        if (generatedBitmap != null && lastRenderedSignature == currentSignature) {
+            imageViewQRCode.setImageBitmap(generatedBitmap)
+            updatePreviewState(hasPreview = true)
+            PerformanceTracer.record(
+                "qr_generate_skipped",
+                0,
+                mapOf("reason" to "unchanged_signature", "size" to size.toString())
+            )
+            syncPerformanceUi()
+            return true
+        }
+
+        val renderStartTime = System.nanoTime()
+        val qrBitmap = PerformanceTracer.trace(
+            "qr_generate",
+            mapOf(
+                "size" to size.toString(),
+                "content_type" to getString(selectedContentType().labelResId),
+                "has_logo" to (currentLogoUri != null).toString()
+            )
+        ) {
+            qrCodeGenerator.generateQRCode(
+                text = qrContent,
+                width = size,
+                height = size,
+                foregroundColor = color,
+                backgroundColor = selectedBackgroundColor,
+                designStyle = selectedDesignStyle(),
+                eyeStyle = selectedEyeStyle(),
+                centerBadge = selectedCenterBadge(),
+                centerLogo = selectedLogoBitmap()
+            )
+        }
+        val renderDurationMs = (System.nanoTime() - renderStartTime) / 1_000_000
         imageViewQRCode.setImageBitmap(qrBitmap)
         generatedBitmap = qrBitmap
+        lastRenderedSignature = currentSignature
         updatePreviewState(hasPreview = true)
         AppTelemetry.logEvent(
             "qr_generated",
             mapOf(
+                "render_ms" to renderDurationMs.toString(),
                 "size" to size.toString(),
                 "content_type" to getString(selectedContentType().labelResId),
                 "color" to formatColor(color),
@@ -2322,7 +2412,24 @@ class MainActivity : ComponentActivity() {
         if (showValidationError) {
             announceAccessibilityMessage(getString(R.string.qr_generated_announcement))
         }
+        syncPerformanceUi()
         return true
+    }
+
+    private fun buildRenderSignature(qrContent: String, size: Int, color: Int): String {
+        return listOf(
+            qrContent,
+            size.toString(),
+            color.toString(),
+            selectedBackgroundColor.toString(),
+            selectedContentType().name,
+            selectedWifiSecurity().name,
+            currentWifiHidden.toString(),
+            selectedDesignStyle().name,
+            selectedEyeStyle().name,
+            selectedCenterBadge().name,
+            currentLogoUri?.toString().orEmpty()
+        ).joinToString("|")
     }
 
     private fun buildQrContent(showValidationError: Boolean): String? {
@@ -2817,6 +2924,8 @@ class MainActivity : ComponentActivity() {
 }
 
 class QRCodeGenerator {
+    private val writer = QRCodeWriter()
+
     fun generateQRCode(
         text: String,
         width: Int,
@@ -2828,14 +2937,17 @@ class QRCodeGenerator {
         centerBadge: MainActivity.CenterBadge,
         centerLogo: Bitmap?
     ): Bitmap {
-        val writer = QRCodeWriter()
         val bitMatrix = writer.encode(text, BarcodeFormat.QR_CODE, width, height)
         val baseBitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        for (x in 0 until width) {
-            for (y in 0 until height) {
-                baseBitmap.setPixel(x, y, if (bitMatrix[x, y]) foregroundColor else backgroundColor)
+        val pixels = IntArray(width * height)
+        for (y in 0 until height) {
+            val rowOffset = y * width
+            for (x in 0 until width) {
+                pixels[rowOffset + x] =
+                    if (bitMatrix[x, y]) foregroundColor else backgroundColor
             }
         }
+        baseBitmap.setPixels(pixels, 0, width, 0, 0, width, height)
         val styledBitmap = applyDesignStyle(
             applyEyeStyle(baseBitmap, foregroundColor, backgroundColor, eyeStyle),
             foregroundColor,

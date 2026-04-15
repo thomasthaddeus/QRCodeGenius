@@ -41,6 +41,29 @@
         android:textAllCaps="false"
         android:textColor="@color/button_primary_text" />
 
+    <Button
+        android:id="@+id/buttonTogglePerfPanel"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/button_secondary_bg"
+        android:text="@string/perf_panel_toggle"
+        android:textAllCaps="false"
+        android:textColor="@color/button_secondary_text"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/textViewPerfLogs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_input_surface"
+        android:padding="14dp"
+        android:text="@string/perf_panel_empty"
+        android:textColor="@color/text_secondary"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/textViewHistoryEmpty"
         android:layout_width="match_parent"
